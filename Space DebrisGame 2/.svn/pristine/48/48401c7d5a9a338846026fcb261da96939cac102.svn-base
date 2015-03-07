@@ -1,0 +1,37 @@
+//
+//  LevelSelectionScene.h
+//  Space Debris
+//
+//  Created by Globussoft 1 on 6/18/14.
+//  Copyright (c) 2014 Razeware LLC. All rights reserved.
+//
+
+#import <SpriteKit/SpriteKit.h>
+#import "MyScene.h"
+#import <AVFoundation/AVFoundation.h>
+
+@interface LevelSelectionScene : SKScene<AVAudioPlayerDelegate,MySceneDelegate>
+{
+    UIButton *btnLevels;
+    UIButton *btnBack;
+    UIScrollView *scrollView;
+    UIViewController *rootViewController;
+    SKSpriteNode *background;
+    SKSpriteNode *ready1;
+    SKSpriteNode *cloud;
+     SKSpriteNode *ready2;
+     SKSpriteNode *ready3;
+    SKSpriteNode *ready4;
+}
+
+@property (nonatomic) CGSize contentSize;
+@property(nonatomic) CGPoint contentOffset;
+@property(nonatomic,strong)  AVAudioPlayer * _musicPlayer;
+
+-(id)initWithSize:(CGSize)size ;
+-(void)setupBackGround;
+
+//-(void)setContentScale:(CGFloat)scale;
+//-(void)setContentOffset:(CGPoint)contentOffset;
+
+@end

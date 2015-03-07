@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Space Debris Phantom</string>
+	<key>CFBundleExecutable</key>
+	<string>${EXECUTABLE_NAME}</string>
+	<key>CFBundleIconFiles</key>
+	<array>
+		<string>icon-29pt.png</string>
+		<string>icon-29pt@2x.png</string>
+		<string>icon-40pt.png</string>
+		<string>icon-40pt@2x.png</string>
+		<string>icon-76pt.png</string>
+		<string>icon-76pt@2x.png</string>
+		<string>icon-120.png</string>
+		<string>icon-120@2x.png</string>
+		<string>icon-58.png</string>
+		<string>icon-58@2x.png</string>
+		<string>icon-80.png</string>
+		<string>icon-80@2x.png</string>
+	</array>
+	<key>CFBundleIcons~ipad</key>
+	<dict/>
+	<key>CFBundleIdentifier</key>
+	<string>com.globussoft.SpaceDebrisPhantom</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>${PRODUCT_NAME}</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb1443163789294538</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1.1</string>
+	<key>FacebookAppID</key>
+	<string>1443163789294538</string>
+	<key>FacebookDisplayName</key>
+	<string>Space Debris Phantom</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Transformers Movie.ttf</string>
+		<string>bullpen3.ttf</string>
+		<string>TerrorPro.ttf</string>
+		<string>PressStart2P.ttf</string>
+		<string>Icon/bullpen3.ttf</string>
+	</array>
+	<key>UILaunchImageFile~ipad</key>
+	<string>Default7-ipad@2x.png</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UIStatusBarHidden</key>
+	<true/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+</dict>
+</plist>

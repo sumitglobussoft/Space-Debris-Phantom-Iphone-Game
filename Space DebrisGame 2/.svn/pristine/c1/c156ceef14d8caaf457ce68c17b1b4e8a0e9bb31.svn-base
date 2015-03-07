@@ -1,0 +1,112 @@
+//
+//  AchievementsHelper.m
+//  CircuitRacer
+//
+//  Created by Main Account on 9/23/13.
+//  Copyright (c) 2013 Razeware LLC. All rights reserved.
+//
+
+#import "AchievementsHelper.h"
+
+static NSString* const kPrimi50 = @"it.devco.Space_Debris.Primi50";
+static NSString* const kPrimi100 = @"it.devco.Space_Debris.Primi100";
+static NSString* const kPrimi250 = @"it.devco.Space_Debris.Primi250";
+static NSString* const kPrimi500 = @"it.devco.Space_Debris.Primi500";
+static NSString* const kPrimi1000 = @"it.devco.Space_Debris.Primi1000";
+static NSString* const kPrimi2000 = @"it.devco.Space_Debris.Primi2000";
+static NSString* const kPrimi3000 = @"it.devco.Space_Debris.Primi3000";
+static NSString* const kPrimi5000 = @"it.devco.Space_Debris.Primi5000";
+static NSString* const kPrimi9999 = @"it.devco.Space_Debris.Primi9999";
+
+@implementation AchievementsHelper
+
++ (GKAchievement *)medaglieAchievement:(int)score
+{
+    GKAchievement *collisionAchievement;
+    if ((score > 0)&&(score < 99))
+    {
+        // 50
+        collisionAchievement= [[GKAchievement alloc] initWithIdentifier:kPrimi50];
+        collisionAchievement.percentComplete = 100.0;
+        collisionAchievement.showsCompletionBanner = YES;
+    }
+    else if ((score >= 100)&&(score < 250))
+    {
+        // 100
+        collisionAchievement= [[GKAchievement alloc] initWithIdentifier:kPrimi100];
+        collisionAchievement.percentComplete = 100.0;
+        collisionAchievement.showsCompletionBanner = YES;
+    }
+    else if ((score >= 250)&&(score < 500))
+    {
+        // 250
+        collisionAchievement= [[GKAchievement alloc] initWithIdentifier:kPrimi250];
+        collisionAchievement.percentComplete = 100.0;
+        collisionAchievement.showsCompletionBanner = YES;
+    }
+    else if ((score >= 500)&&(score < 1000))
+    {
+        // 500
+        collisionAchievement= [[GKAchievement alloc] initWithIdentifier:kPrimi500];
+        collisionAchievement.percentComplete = 100.0;
+        collisionAchievement.showsCompletionBanner = YES;
+    }
+    
+    else if ((score >= 1000)&&(score < 2000))
+    {
+        // 1000
+        collisionAchievement= [[GKAchievement alloc] initWithIdentifier:kPrimi1000];
+        collisionAchievement.percentComplete = 100.0;
+        collisionAchievement.showsCompletionBanner = YES;
+    }
+    else if ((score >= 2000)&&(score < 3000))
+    {
+        // 2000
+        collisionAchievement= [[GKAchievement alloc] initWithIdentifier:kPrimi2000];
+        collisionAchievement.percentComplete = 100.0;
+        collisionAchievement.showsCompletionBanner = YES;
+    }
+    else if ((score >= 3000)&&(score < 5000))
+    {
+        // 3000
+        collisionAchievement= [[GKAchievement alloc] initWithIdentifier:kPrimi3000];
+        collisionAchievement.percentComplete = 100.0;
+        collisionAchievement.showsCompletionBanner = YES;
+    }
+    else if ((score >= 5000)&&(score < 9999))
+    {
+        // 5000
+        collisionAchievement= [[GKAchievement alloc] initWithIdentifier:kPrimi5000];
+        collisionAchievement.percentComplete = 100.0;
+        collisionAchievement.showsCompletionBanner = YES;
+    }
+    else if (score >= 9999)
+    {
+        // >9999
+        collisionAchievement= [[GKAchievement alloc] initWithIdentifier:kPrimi9999];
+        collisionAchievement.percentComplete = 100.0;
+        collisionAchievement.showsCompletionBanner = YES;
+    }
+    
+    return collisionAchievement;
+}
+
+/*
++ (GKAchievement *)achievementForLevel:(int)levelType
+{
+  NSString *achievementId = kAmatuerAchievementId;
+  if (levelType == 0) {
+    achievementId = kIntermediateAchievementId;
+  } else if(levelType == 1) {
+    achievementId = kProfessionalAchievementId;
+  }
+  
+  GKAchievement *levelAchievement = 
+    [[GKAchievement alloc] initWithIdentifier:achievementId];
+  
+  levelAchievement.percentComplete = 100;
+  levelAchievement.showsCompletionBanner = YES;
+  return levelAchievement;
+}*/
+
+@end

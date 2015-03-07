@@ -1,0 +1,27 @@
+//
+//  GameOverScene.h
+//  Space Debris
+//
+//  Created by Globussoft 1 on 6/19/14.
+//  Copyright (c) 2014 Razeware LLC. All rights reserved.
+//
+
+#import <SpriteKit/SpriteKit.h>
+#import <AVFoundation/AVFoundation.h>
+#import "MyScene.h"
+
+
+
+@interface GameOverScene : SKScene<MySceneDelegate>
+
+{
+ NSUserDefaults *userDefault;
+}
+-(id)initWithSize:(CGSize)size retryOrNextLevel:(int) option playSound:(int)sound;
+@property(nonatomic,strong)NSString *str;
+@property(nonatomic,strong)NSString *bestScore;
+@property(nonatomic,strong)NSString *strPostMessage;
+@property(nonatomic)NSInteger value;
+@property(nonatomic)NSInteger soundORnot;
+@property(nonatomic,strong)  AVAudioPlayer * _musicPlayer;
+@end

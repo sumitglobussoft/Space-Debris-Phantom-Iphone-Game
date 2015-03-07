@@ -1,0 +1,41 @@
+//
+//  MyScene.h
+//  Space Debris!
+//
+//  Copyright (c) 2014 Giorgio Minissale. All rights reserved.
+//
+
+#import <SpriteKit/SpriteKit.h>
+#import <AVFoundation/AVFoundation.h>
+
+typedef NS_ENUM(int, GameState) {
+  GameStateMainMenu,
+  GameStateTutorial,
+  GameStatePlay,
+  GameStateFalling,
+  GameStateShowingScore,
+  GameStateGameOver
+};
+
+@protocol MySceneDelegate
+- (UIImage *)screenshot;
+- (void)shareString:(NSString *)string url:(NSURL*)url image:(UIImage *)screenshot;
+@end
+
+@interface MyScene : SKScene<AVAudioPlayerDelegate>
+{int x;}
+-(id)initWithSize:(CGSize)size delegate:(id<MySceneDelegate>)delegate;
+
+@property (strong, nonatomic) id<MySceneDelegate> delegate;
+//@property(nonatomic,strong)  SKLabelNode *Music;
+@property(nonatomic,strong)  AVAudioPlayer * _musicPlayer;
+@property(nonatomic,strong)UIButton *button;
+@property(nonatomic,strong)SKLabelNode *time;
+@property(nonatomic) int timeSec;
+@property(nonatomic) int timeMin;
+@property(nonatomic)BOOL state;
+@property(nonatomic, strong) NSTimer *timer;
+@property(nonatomic,strong) SKLabelNode *Level;
+@property(nonatomic)int num;
+@property(nonatomic)BOOL gameOverDecision;
+@end

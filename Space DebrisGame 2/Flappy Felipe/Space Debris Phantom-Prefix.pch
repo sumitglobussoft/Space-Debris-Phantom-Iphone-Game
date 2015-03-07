@@ -1,0 +1,37 @@
+//
+//  Prefix header
+//
+//  The contents of this file are implicitly included at the beginning of every source file.
+//
+
+#import <Availability.h>
+
+#ifndef __IPHONE_5_0
+#warning "This project uses features only available in iOS SDK 5.0 and later."
+#endif
+
+#ifdef __OBJC__
+  #import <UIKit/UIKit.h>
+  #import <Foundation/Foundation.h>
+//#endif
+//#define NSLog(...)                       //
+#import "SKTUtils.h"
+#import "SKNode+SKTDebugDraw.h"
+#import "SKAction+SKTSpecialEffects.h"
+
+#define FacebookRequestNotification @"FacebookRequestNotification"
+#define FacebookConnected @"FacebookConneted"
+#define ConnectedFacebookUserID @"ConnectedFacebookUserID"
+#define LastConnectedFBID @"LastConnectedFBID"
+#define ParseScoreTableName @"GameScore"
+#define AppPurchaseTableName @"LifeDetails"
+#define FacebookGameFrindes @"FacebookGameFriends"
+#define FacebookInviteFriends @"NonUserFacebookFriends"
+#define FacebookAllFriends @"FacebookAllFriends"
+
+
+#define FacebookTitle @"OpenStoryFacebookTitle"
+#define FacebookType @"OpenStoryFacebookType"
+#define FacebookDescription @"OpenStoryFacebookDescription"
+#define FacebookActionType @"OpenStoryAction"
+#endif

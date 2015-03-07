@@ -1,0 +1,178 @@
+//
+//  ViewController.m
+//  Space Debris!
+//
+//  Copyright (c) 2014 Giorgio Minissale. All rights reserved.
+//
+
+#import "ViewController.h"
+#import "MyScene.h"
+#import "GameKitHelper.h"
+#import "LevelSelectionScene.h"
+#import "GameOverScene.h"
+#import "GameStartScreen.h"
+
+
+static NSString * kViewTransformChanged = @"view transform changed";
+@interface ViewController () <MySceneDelegate>
+
+@property(nonatomic, weak)UIView *clearContentView;
+//@property(nonatomic, weak)LevelSelectionScene *scene;
+@property(nonatomic, weak)GameStartScreen *scene;
+//@property(nonatomic, weak)GameOverScene *scene;
+
+@end
+
+@implementation ViewController
+@synthesize bannerView = _bannerView;
+
+- (void)viewDidLoad
+{
+  [super viewDidLoad];
+    // Opend iAD
+    _bannerView = [[ADBannerView alloc] initWithFrame:CGRectZero];
+     NSLog(@"before bannerView frame size height %f and width %f",_bannerView.frame.size.width,_bannerView.frame.size.height);
+    CGRect adFrame = _bannerView.frame;
+    adFrame.origin.y = self.view.frame.size.height-_bannerView.frame.size.height;
+    _bannerView.frame = adFrame;
+    _bannerView.delegate = self;
+    NSLog(@"after bannerView frame size height %f and width %f",_bannerView.frame.size.width,_bannerView.frame.size.height);
+//   [self.view addSubview:_bannerView];
+
+    // GAME CENTER
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(showAuthenticationViewController) name:PresentAuthenticationViewController object:nil];
+    [[GameKitHelper sharedGameKitHelper] authenticateLocalPlayer];
+    //
+    
+  // Configure the view.
+  SKView * skView = (SKView *)self.view;
+  skView.showsFPS = NO;
+  skView.showsNodeCount = NO;
+  
+  // Create and configure the scene.
+  //khomesh
+//  SKScene * scene = [[MyScene alloc] initWithSize:skView.bounds.size delegate:self];
+//  scene.scaleMode = SKSceneScaleModeAspectFill;
+//  
+//    LevelSelectionScene * scene = [[LevelSelectionScene alloc] initWithSize:skView.bounds.size ];
+//    scene.scaleMode = SKSceneScaleModeAspectFill;
+    
+   GameStartScreen * scene = [[GameStartScreen alloc] initWithSize:skView.bounds.size ];
+    scene.scaleMode = SKSceneScaleModeAspectFill;
+
+
+//    GameOverScene * scene = [[GameOverScene alloc] initWithSize:skView.bounds.size ];
+//           scene.scaleMode = SKSceneScaleModeAspectFill;
+    
+  // Present the scene.
+  [skView presentScene:scene];
+    
+    _scene = scene;
+    
+        //Commenting Me 19 june
+
+    
+    
+}
+    //Commenting Me 19 june
+    //ScrollView Delegate
+
+//Commenting Me 19 june
+
+
+
+// GAME CENTER
+- (void)showAuthenticationViewController {
+    GameKitHelper *gameKitHelper = [GameKitHelper sharedGameKitHelper];
+    [self presentViewController: gameKitHelper.authenticationViewController
+                                         animated:YES completion:nil];
+}
+
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    
+    @try {
+        [self.clearContentView removeObserver:self forKeyPath:@"transform"];
+    }
+    @catch (NSException *exception) {    }
+    @finally {    }
+
+}
+
+- (BOOL)shouldAutorotate
+{
+  return YES;
+}
+
+- (NSUInteger)supportedInterfaceOrientations
+{
+  if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPhone) {
+    return UIInterfaceOrientationMaskAllButUpsideDown;
+  } else {
+    return UIInterfaceOrientationMaskAll;
+  }
+}
+
+- (void)didReceiveMemoryWarning
+{
+  [super didReceiveMemoryWarning];
+  // Release any cached data, images, etc that aren't in use.
+}
+
+- (BOOL)prefersStatusBarHidden {
+  return YES;
+}
+
+- (UIImage *)screenshot {
+  UIGraphicsBeginImageContextWithOptions(self.view.bounds.size, NO, 1.0);
+  [self.view drawViewHierarchyInRect:self.view.bounds afterScreenUpdates:YES];
+  UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+  UIGraphicsEndImageContext();
+  return image;
+}
+
+- (void)shareString:(NSString *)string url:(NSURL*)url image:(UIImage *)image {
+  UIActivityViewController *vc = [[UIActivityViewController alloc] initWithActivityItems:@[string, url, image] applicationActivities:nil];
+  [self presentViewController:vc animated:YES completion:nil];
+
+}
+
+- (void)bannerViewDidLoadAd:(ADBannerView *)banner
+{
+    // Display BannerView
+    _bannerView.hidden = NO;
+    [UIView animateWithDuration:0.4f
+                     animations:^{
+                         _bannerView.alpha = 1.0f;
+                     }];
+}
+
+- (void)bannerView:(ADBannerView *)banner didFailToReceiveAdWithError:(NSError *)error
+{
+    // Print error
+    [UIView animateWithDuration:0.1f
+                     animations:^{
+                         _bannerView.alpha = 0.0f;
+                     } completion:^(BOOL finished) {
+                         _bannerView.hidden = YES;
+                     }];
+}
+    //19 june
+
+
+    // 19 june
+
+//-(void)dealloc
+//{
+//    @try {
+//        [self.clearContentView removeObserver:self forKeyPath:@"transform"];
+//    }
+//    @catch (NSException *exception) {    }
+//    @finally {    }
+//}
+//
+
+
+
+@end

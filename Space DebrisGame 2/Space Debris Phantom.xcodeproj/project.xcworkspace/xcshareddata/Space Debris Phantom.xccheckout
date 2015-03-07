@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>C741AFC9-2E48-4FAA-BDFA-512D4C925CA0</string>
+	<key>IDESourceControlProjectName</key>
+	<string>Space Debris Phantom</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>c03df7ed-55c0-4e48-8868-eeeb232f9c4b++505</key>
+		<string>https://subversion.assembla.com/svn/space-debris-iphone-game/trunk</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>Space Debris Phantom.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>c03df7ed-55c0-4e48-8868-eeeb232f9c4b++505</key>
+		<string>../..</string>
+	</dict>
+	<key>IDESourceControlProjectRepositoryRootDictionary</key>
+	<dict>
+		<key>c03df7ed-55c0-4e48-8868-eeeb232f9c4b++505</key>
+		<string>https://subversion.assembla.com/svn/space-debris-iphone-game</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://subversion.assembla.com/svn/space-debris-iphone-game/trunk/Space%20Debris%20Phantom.xcodeproj</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>c03df7ed-55c0-4e48-8868-eeeb232f9c4b++505</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.subversion</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>c03df7ed-55c0-4e48-8868-eeeb232f9c4b++505</string>
+			<key>IDESourceControlWCCName</key>
+			<string>Space%20DebrisGame%202</string>
+		</dict>
+	</array>
+</dict>
+</plist>

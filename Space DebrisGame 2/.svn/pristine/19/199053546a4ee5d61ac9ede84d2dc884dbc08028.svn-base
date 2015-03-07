@@ -1,0 +1,245 @@
+//
+//  AppDelegate.m
+//  Space Debris!
+//
+//  Copyright (c) 2014 Giorgio Minissale. All rights reserved.
+//
+
+#import "AppDelegate.h"
+#import <FacebookSDK/FacebookSDK.h>
+
+#define APP_HANDLED_URL @"App_Handel_Url"
+#define ShareToFacebook @"FacebookShare"
+#define RequestTOFacebook @"LifeRequest"
+#define ReceiveNotification @"REceiveNotification"
+
+@implementation AppDelegate
+
+-(UIViewController *) getRootViewController{
+    
+    return self.window.rootViewController;
+}
+
+
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+{
+    // Override point for customization after application launch.
+    
+    
+    return YES;
+}
+							
+- (void)applicationWillResignActive:(UIApplication *)application
+{
+  // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
+  // Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
+}
+
+- (void)applicationDidEnterBackground:(UIApplication *)application
+{
+  // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later. 
+  // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
+}
+
+- (void)applicationWillEnterForeground:(UIApplication *)application
+{
+  // Called as part of the transition from the background to the inactive state; here you can undo many of the changes made on entering the background.
+}
+
+- (void)applicationDidBecomeActive:(UIApplication *)application
+{
+  // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
+}
+
+- (void)applicationWillTerminate:(UIApplication *)application
+{
+  // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+}
+
+#define Facebook delegates
+
+- (void) closeSession {
+    [FBSession.activeSession closeAndClearTokenInformation];
+}
+
+- (BOOL)openSessionWithAllowLoginUI:(NSInteger)isLoginReq{
+    self.CurrentValue = isLoginReq;
+    NSArray *permissions = [[NSArray alloc] initWithObjects:@"public_profile",@"email",@"status_update",@"user_photos",@"user_birthday",@"user_about_me",@"user_friends",@"photo_upload",@"read_friendlists", nil];
+    
+    FBSession *session = [[FBSession alloc] initWithPermissions:permissions];
+        // Set the active session
+    [FBSession setActiveSession:session];
+    
+    [session openWithBehavior:FBSessionLoginBehaviorWithNoFallbackToWebView
+            completionHandler:^(FBSession *session,
+                                FBSessionState status,
+                                NSError *error) {
+                
+                if (error==nil) {
+                        //[NSThread detachNewThreadSelector:@selector(fetchFacebookGameFriends) toTarget:self withObject:nil];
+                    FBAccessTokenData *tokenData= session.accessTokenData;
+                    
+                    NSString *accessToken = tokenData.accessToken;
+                    NSLog(@"AccessToken==%@",accessToken);
+                    
+                    [[NSUserDefaults standardUserDefaults] setObject:accessToken forKey:@"accessToken"];
+                    
+                        // [self fetchFacebookGameFriends:accessToken];
+                    
+                    [FBRequestConnection
+                     startForMeWithCompletionHandler:^(FBRequestConnection *connection,
+                                                       id<FBGraphUser> user,
+                                                       NSError *error){
+                         
+                         NSString *userInfo = @"";
+                         userInfo = [userInfo
+                                     stringByAppendingString:
+                                     [NSString stringWithFormat:@"Name: %@\n\n",
+                                      [user objectForKey:@"id"]]];
+                         NSLog(@"userinfo = %@",userInfo);
+                         NSArray *ary=[userInfo componentsSeparatedByString:@":"];
+                         if([ary count]>1){
+                             userInfo=[ary objectAtIndex:1];
+                             userInfo=[userInfo stringByReplacingOccurrencesOfString:@" " withString:@""];
+                             userInfo=[userInfo stringByReplacingOccurrencesOfString:@"\n" withString:@""];
+                             NSLog(@"sender id=%@",userInfo);
+                             
+                  [[NSUserDefaults standardUserDefaults] setBool:YES forKey:FacebookConnected];
+                   [[NSUserDefaults standardUserDefaults] setObject:userInfo forKey:ConnectedFacebookUserID];
+                         }
+                     }];
+                    
+                        // [self retriveAllfriends];
+                }
+                else{
+                    
+                    NSLog(@"Session not open==%@",error);
+                }
+                
+                    // Respond to session state changes,
+                    // ex: updating the view
+            }];
+
+    return YES;
+}
+
+-(void) fetchFacebookGameFriends:(NSString *)accessToken{
+    NSString *query =
+    @"SELECT uid, name, pic_small FROM user WHERE is_app_user = 1 and uid IN "
+    @"(SELECT uid2 FROM friend WHERE uid1 = me() )";
+    
+    NSDictionary *queryParam = @{ @"q": query, @"access_token":accessToken };
+        // Make the API request that uses FQL
+    [FBRequestConnection startWithGraphPath:@"/fql"parameters:queryParam HTTPMethod:@"GET"completionHandler:^(FBRequestConnection *connection,id result,NSError *error) {
+        if (error) {
+            NSLog(@"Error: %@", [error localizedDescription]);
+        }
+        else {
+                // NSLog(@"Result: %@", result);
+            
+            NSArray *friendInfo = (NSArray *) result[@"data"];
+            
+            NSLog(@"Array Count==%lu",(unsigned long)[friendInfo count]);
+            
+            NSLog(@"\n\nArray==%@",friendInfo);
+            
+            NSMutableArray *frndsarray = [[NSMutableArray alloc] init];
+            
+            for (int i =0; i<friendInfo.count; i++) {
+                NSDictionary *dict = [friendInfo objectAtIndex:i];
+                NSString *fbID = [NSString stringWithFormat:@"%@",[dict objectForKey:@"uid"]];
+                [frndsarray addObject:fbID];
+                
+            }//End For Loop
+            
+            [[NSUserDefaults standardUserDefaults] setObject:frndsarray forKey:FacebookGameFrindes];
+        }
+    }];
+}
+
+- (BOOL)application:(UIApplication *)application
+            openURL:(NSURL *)url
+  sourceApplication:(NSString *)sourceApplication
+         annotation:(id)annotation {
+        // attempt to extract a token from the url
+        //return [FBSession.activeSession handleOpenURL:url];
+    
+    NSString *openUrl = [NSString stringWithFormat:@"%@",url];
+    NSLog(@"open url %@",openUrl);
+    NSArray *tempAry = [openUrl componentsSeparatedByString:@"&"];
+    if (tempAry.count>1) {
+        NSString *tempString = [tempAry objectAtIndex:0];
+        NSArray *tokenAry = [tempString componentsSeparatedByString:@"="];
+        if (tokenAry.count>1) {
+            NSString *fbaccessToken = [tokenAry objectAtIndex:1];
+            self.accessToken = fbaccessToken;
+            NSLog(@"Access Token -==-=- %@",self.accessToken);
+            
+        }
+    }
+    if ([openUrl rangeOfString:@"authorize"].location != NSNotFound) {
+        
+        if (self.CurrentValue == 1) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:ShareToFacebook object:nil];
+        }
+        else if (self.CurrentValue == 2) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:RequestTOFacebook object:nil];
+        }
+        else if (self.CurrentValue == 3) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:ReceiveNotification object:nil];
+        }
+        else{
+            NSLog(@"Unknown");
+        }
+    }
+    
+    NSLog(@"Open Url == %@",url);
+    NSLog(@"Source Application == %@",sourceApplication);
+        // attempt to extract a token from the url
+    
+    [FBAppCall handleOpenURL:url sourceApplication:sourceApplication fallbackHandler:^(FBAppCall *call) {
+        NSString *accessToken = call.accessTokenData.accessToken;
+        [[NSUserDefaults standardUserDefaults] setObject:accessToken forKey:@"Facebook Access Token"];
+        NSLog(@"App Link Data = %@",call.appLinkData);
+        NSLog(@"call == %@",call);
+        if (call.appLinkData && call.appLinkData.targetURL) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:FacebookRequestNotification object:call.appLinkData.targetURL];
+        }
+        
+    }];
+    return YES;
+}
+- (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url {
+    NSLog(@"Url== %@", url);
+    return [FBSession.activeSession handleOpenURL:url];
+}
+
+//-(void) retriveAppFriends{
+//    
+//    NSString *query =
+//    @"SELECT uid, name, pic_small FROM user WHERE is_app_user = 1 and uid IN "
+//    @"(SELECT uid2 FROM friend WHERE uid1 = me() )";
+//    
+//    
+//    NSDictionary *queryParam = @{ @"q": query };
+//        // Make the API request that uses FQL
+//    [FBRequestConnection startWithGraphPath:@"/fql"parameters:queryParam HTTPMethod:@"GET"completionHandler:^(FBRequestConnection *connection,id result,NSError *error) {
+//        if (error) {
+//            NSLog(@"Error: %@", [error localizedDescription]);
+//        }
+//        else {
+//                // NSLog(@"Result: %@", result);
+//            
+//            NSArray *friendInfo = (NSArray *) result[@"data"];
+//            
+//            NSLog(@"Array Count==%lu",(unsigned long)[friendInfo count]);
+//            
+//            NSLog(@"\n\nArray==%@",friendInfo);
+//            
+//            
+//        }
+//    }];
+//}
+
+
+@end

@@ -1,0 +1,1374 @@
+//
+//  MyScene.m
+//  Space Debris!
+//
+//  Copyright (c) 2014 Giorgio Minissale. All rights reserved.
+//
+
+#import "MyScene.h"
+#import "AchievementsHelper.h"
+#import "GameKitHelper.h"
+#import "LevelSelectionScene.h"
+#import "GameOverScene.h"
+#import "AppDelegate.h"
+#import "GameStartScreen.h"
+#import "GameStatus.h"
+//#import "LevelSelectionViewController.h"
+#import "FMMParallaxNode.h"
+#import <SpriteKit/SpriteKit.h>
+
+#define kNumAsteroids   15
+
+typedef NS_ENUM(int, Layer) {
+  LayerBackground,
+  LayerObstacle,
+  LayerForeground,
+  LayerPlayer,
+  LayerUI
+};
+
+typedef NS_OPTIONS(int, EntityCategory) {
+  EntityCategoryPlayer = 1 << 0,
+  EntityCategoryObstacle = 1 << 1,
+  EntityCategoryGround = 1 << 2 ,
+  EntityCategoryAstroid= 1 << 3,
+  EntityCategoryCoin= 1 << 4,
+  EntityCategoryCoinMinus= 1 << 5,
+};
+
+// Gameplay - astronaut movement
+static const float kGravity = -1500.0;
+static const float kImpulse = 400.0;
+
+// Gameplay - ground speed
+static const float kGroundSpeed = 150.0f;
+
+// Gameplay - obstacles positioning
+static const float kGapMultiplier = 2.0;
+static const float kBottomObstacleMinFraction = 0.1;
+static const float kBottomObstacleMaxFraction = 0.6;
+
+// Gameplay - obstacles timing
+//static const float kFirstSpawnDelay = 1.75;
+//static const float kEverySpawnDelay = 1.5;
+
+// Looks
+static const int kNumForegrounds = 2;
+static const float kMargin = 20;
+static const float kAnimDelay = 0.3;
+static NSString *const kFontName = @"PressStart2P";
+static NSString *const kFontName1 = @"NKOTB Fever";
+
+// App ID
+static const int APP_STORE_ID = 827219677;
+
+@interface MyScene() <SKPhysicsContactDelegate>
+@end
+
+@implementation MyScene {
+
+  SKNode *_worldNode;
+  
+  float _playableStart;
+  float _playableHeight;
+
+  NSTimeInterval _lastUpdateTime;
+  NSTimeInterval _dt;
+
+    FMMParallaxNode *_parallaxNodeBackgrounds;
+    
+  SKSpriteNode *_player;
+  SKSpriteNode *_sombrero;
+
+  CGPoint _playerVelocity;
+  
+  SKAction * _dingAction;
+  SKAction * _flapAction;
+  SKAction * _whackAction;
+  SKAction * _fallingAction;
+  SKAction * _hitGroundAction;
+  SKAction * _popAction;
+  SKAction * _coinAction;
+  
+  BOOL _hitGround;
+  BOOL _hitObstacle;
+//    SKSpriteNode *coin;
+  GameState _gameState;
+  
+    
+    NSMutableArray *_asteroids;
+    int _nextAsteroid;
+    double _nextAsteroidSpawn;
+
+    NSMutableArray *_coins;
+    int _nextCoin;
+    double _nextCoinSpawn;
+    
+    NSMutableArray *coinMinus;
+    int _nextCoinMinus;
+    double _nextCoinMinusSpawn;
+  
+    SKLabelNode *lifeLabel;
+    
+  SKLabelNode *_scoreLabel;
+  int _score;
+    int val;
+}
+
+@synthesize _musicPlayer;
+
+-(id)initWithSize:(CGSize)size delegate:(id<MySceneDelegate>)delegate {
+  if (self = [super initWithSize:size]) {
+      NSLog(@"≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠≠");
+
+    [GameStatus sharedState].remLife=
+     [[NSUserDefaults standardUserDefaults]  integerForKey:@"life"];
+
+    _delegate = delegate;
+    
+    _worldNode = [SKNode node];
+    [self addChild:_worldNode];
+    
+    self.physicsWorld.contactDelegate = self;
+    self.physicsWorld.gravity = CGVectorMake(0, 0);
+      NSLog(@"gggg");
+    [self switchToTutorial];
+      
+      self.gameOverDecision=YES;
+      self.state=YES;
+      
+      
+      self.time = [[SKLabelNode alloc] initWithFontNamed:kFontName1];
+      self.time.fontColor = [UIColor whiteColor];
+      self.time.position = CGPointMake(250, 460);
+      self.time.name=@"time";
+      self.time.zPosition=20;
+      self.time.verticalAlignmentMode =SKLabelVerticalAlignmentModeTop;
+      [self addChild:self.time];
+      
+      self.Level = [[SKLabelNode alloc] initWithFontNamed:kFontName1];
+      self.Level.fontColor = [UIColor whiteColor];
+      self.Level.position = CGPointMake(50, 460);
+      self.Level.text =[NSString stringWithFormat:@"Level %d",[GameStatus sharedState].levelNumber ];
+//      NSLog(@"level %d",[GameStatus sharedState].levelNumber);
+      self.Level.name=@"level";
+      self.Level.zPosition=20;
+      self.Level.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+      [self addChild:self.Level];
+
+      
+      UIViewController *    rootViewController = (UIViewController*)[(AppDelegate*)[[UIApplication sharedApplication] delegate] getRootViewController];
+      self.button = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+      [self.button addTarget:self
+                 action:@selector(aMethod:)
+       forControlEvents:UIControlEventTouchUpInside];
+      [self.button setImage:[UIImage imageNamed:@"musicOn1.png"] forState:UIControlStateNormal];
+      self.button.frame = CGRectMake(20.0, 40.0, 40.0, 40.0);
+      [rootViewController.view addSubview:self.button];
+      self.num=1;
+      [self playMusic];
+      [self addChild:[self loadEmitterNode:@"stars1"]];
+      [self addChild:[self loadEmitterNode:@"stars2"]];
+      [self addChild:[self loadEmitterNode:@"stars3"]];
+
+      
+      NSArray *parallaxBackgroundNames = @[@"bg_galaxy.png", @"bg_planetsunrise.png",
+                                           @"bg_spacialanomaly.png", @"bg_spacialanomaly2.png"];
+      CGSize planetSizes = CGSizeMake(200.0, 200.0);
+      _parallaxNodeBackgrounds = [[FMMParallaxNode alloc] initWithBackgrounds:parallaxBackgroundNames
+                                                                         size:planetSizes
+                                                         pointsPerSecondSpeed:10.0];
+      _parallaxNodeBackgrounds.position = CGPointMake(size.width/2.0, size.height/2.0);
+      [_parallaxNodeBackgrounds randomizeNodesPositions];
+      [self addChild:_parallaxNodeBackgrounds];
+      
+      self.timeMin = 00;
+      self.timeSec = 20;
+      
+          //Format the string 00:00
+      NSString* timeNow = [NSString stringWithFormat:@"            %02d:%02d", self.timeMin, self.timeSec];
+      self.time.text=timeNow;
+       
+      NSLog(@"timenow %@",timeNow);
+      
+#pragma mark - Setup the asteroids
+//      
+//          _asteroids = [[NSMutableArray alloc] initWithCapacity:kNumAsteroids];
+//            for (int i = 0; i < kNumAsteroids; ++i) {
+//          SKSpriteNode *asteroid = [SKSpriteNode spriteNodeWithImageNamed:@"asteroid.png"];
+////          asteroid.physicsBody = [SKPhysicsBody bodyWithCircleOfRadius:70.0];
+////
+////          asteroid.physicsBody.categoryBitMask=EntityCategoryAstroid;
+////          asteroid.physicsBody.collisionBitMask=0;
+////          asteroid.physicsBody.contactTestBitMask=EntityCategoryPlayer;
+//          asteroid.hidden = YES;
+//          asteroid.zPosition=5;
+//          [asteroid setXScale:0.5];
+//          [asteroid setYScale:0.5];
+//          [_asteroids addObject:asteroid];
+//          [self addChild:asteroid];
+//      }
+
+      
+      
+      #pragma mark - Setup the +10coins
+      _coins = [[NSMutableArray alloc] initWithCapacity:kNumAsteroids];
+      for (int i = 0; i < kNumAsteroids; ++i) {
+       SKSpriteNode *   coin = [SKSpriteNode spriteNodeWithImageNamed:@"+10Coin.png"];
+          
+          coin.physicsBody = [SKPhysicsBody bodyWithCircleOfRadius:17.0];
+          
+          coin.physicsBody.categoryBitMask=EntityCategoryCoin;
+          coin.physicsBody.collisionBitMask=0;
+          coin.physicsBody.contactTestBitMask=EntityCategoryPlayer;
+          coin.hidden = YES;
+          coin.zPosition=10;
+          [coin setXScale:0.5];
+          [coin setYScale:0.5];
+          [_coins addObject:coin];
+          [self addChild:coin];
+          
+    }
+
+#pragma mark - Setup the -10coins
+   coinMinus    = [[NSMutableArray alloc] initWithCapacity:kNumAsteroids];
+      for (int i = 0; i < kNumAsteroids; ++i) {
+          SKSpriteNode *   coinMinuS = [SKSpriteNode spriteNodeWithImageNamed:@"-10coin.png"];
+        coinMinuS.physicsBody = [SKPhysicsBody bodyWithCircleOfRadius:17.0];
+          
+          coinMinuS.physicsBody.categoryBitMask=EntityCategoryCoin;
+          coinMinuS.physicsBody.collisionBitMask=0;
+          coinMinuS.physicsBody.contactTestBitMask=EntityCategoryPlayer;
+          coinMinuS.hidden = YES;
+          coinMinuS.zPosition=10;
+          [coinMinuS setXScale:0.5];
+          [coinMinuS setYScale:0.5];
+          [coinMinus addObject:coinMinuS];
+          [self addChild:coinMinuS];
+          
+      }
+
+      lifeLabel=[[SKLabelNode alloc] initWithFontNamed:kFontName1];
+      lifeLabel.position=CGPointMake(250, 430);
+      lifeLabel.fontColor = [UIColor whiteColor];
+//     lifeLabel.position = CGPointMake(250, 460);
+          //      time.text = @"Share";
+     lifeLabel.name=@"life";
+      lifeLabel.zPosition=20;
+      lifeLabel.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+          //     scoreLabel.zPosition = LayerUI;
+      [self addChild:lifeLabel];
+      lifeLabel.text=[NSString stringWithFormat:@"Life %d",[[NSUserDefaults standardUserDefaults]integerForKey:@"life"]];
+      
+      
+  }
+  return self;
+}
+#pragma mark - NSTimer method
+//#pragma NSTimer method
+
+- (void)timerTick:(NSTimer *)timer {
+    
+    if (self.timeSec > 0)
+    {
+        
+        self.timeSec--;
+        NSString* timeNow = [NSString stringWithFormat:@"             %02d:%02d", self.timeMin, self.timeSec];
+        self.time.text=timeNow;
+        NSLog(@"print %@",timeNow);
+        self.state=NO;
+    }
+    if (self.timeSec==0) {
+       [ _musicPlayer stop];
+//        [self removeAllActions];
+        [_player removeAllActions];
+       [self switchToShowScore:2];
+        
+    }
+    
+    
+}
+
+#pragma mark - StarComing method
+
+- (SKEmitterNode *)loadEmitterNode:(NSString *)emitterFileName
+{
+    NSString *emitterPath = [[NSBundle mainBundle] pathForResource:emitterFileName ofType:@"sks"];
+    SKEmitterNode *emitterNode = [NSKeyedUnarchiver unarchiveObjectWithFile:emitterPath];
+    
+        //do some view specific tweaks
+    emitterNode.particlePosition = CGPointMake(self.size.width/2.0, self.size.height/2.0);
+    emitterNode.particlePositionRange = CGVectorMake(self.size.width+100, self.size.height);
+    
+    return emitterNode;
+    
+}
+
+#pragma mark - MusicButton method
+
+-(void)aMethod:(UIButton *)button{
+    if (self.num==1) {
+        [_musicPlayer stop];
+        [button setImage:[UIImage imageNamed:@"musicOff1.png"] forState:UIControlStateNormal];
+        self.num=2;
+    }
+    else{
+        [_musicPlayer play];
+        [button setImage:[UIImage imageNamed:@"musicOn1.png"] forState:UIControlStateNormal];
+        self.num=1;
+    }
+    //
+}
+- (void)setupSombrero {
+
+  _sombrero = [SKSpriteNode spriteNodeWithImageNamed:@"Smoke"];
+  _sombrero.position = CGPointMake(-27, -8);
+  [_player addChild:_sombrero];
+  
+
+}
+- (void)playMusic
+{
+	NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle]
+                                         pathForResource:@"bgm"
+                                         ofType:@"mp3"]];
+    
+    NSError *error;
+    _musicPlayer = [[AVAudioPlayer alloc]
+                    initWithContentsOfURL:url
+                    error:&error];
+    _musicPlayer.numberOfLoops=-1;
+    if (error)
+    {
+        NSLog(@"Error in audioPlayer: %@",
+              [error localizedDescription]);
+    } else {
+        _musicPlayer.delegate = self;
+        [_musicPlayer prepareToPlay];
+      [_musicPlayer play];
+    }
+}
+
+#pragma mark - Setup methods
+
+- (void)setupBackground {
+    
+    SKSpriteNode  *background ;
+    if([UIScreen mainScreen].bounds.size.height>500){
+        background  = [SKSpriteNode spriteNodeWithImageNamed:@"blankbg1.png"];
+    }
+    else{
+        background  = [SKSpriteNode spriteNodeWithImageNamed:@"blankbg.png"];
+        
+    }
+
+  background.anchorPoint = CGPointMake(0.5, 1);
+  background.position = CGPointMake(self.size.width/2, self.size.height);
+  background.zPosition = LayerBackground;
+  [_worldNode addChild:background];
+  
+  _playableStart = self.size.height - background.size.height;
+//    NSLog(@"playable start %f",_playableStart);
+  _playableHeight = background.size.height;
+//    NSLog(@"playable height %f",_playableHeight);
+
+
+
+  // 1
+  CGPoint lowerLeft = CGPointMake(0, _playableStart);
+  CGPoint lowerRight = CGPointMake(self.size.width, _playableStart);
+
+  self.physicsBody = [SKPhysicsBody bodyWithEdgeFromPoint:lowerLeft toPoint:lowerRight];
+  //[self skt_attachDebugLineFromPoint:lowerLeft toPoint:lowerRight color:[UIColor redColor]];
+  
+  self.physicsBody.categoryBitMask = EntityCategoryGround;
+  self.physicsBody.collisionBitMask = 0;
+  self.physicsBody.contactTestBitMask = EntityCategoryPlayer;
+
+}
+
+- (void)setupForeground {
+  for (int i = 0; i < kNumForegrounds; ++i) {
+    SKSpriteNode *foreground = [SKSpriteNode spriteNodeWithImageNamed:@"Ground"];
+    foreground.anchorPoint = CGPointMake(0, 1);
+    foreground.position = CGPointMake(i * self.size.width, _playableStart);
+    foreground.zPosition = LayerForeground;
+    foreground.name = @"Foreground";
+    [_worldNode addChild:foreground];
+  }
+}
+
+- (void)setupPlayer {
+  _player = [SKSpriteNode spriteNodeWithImageNamed:@"Astronaut0"];
+  _player.position = CGPointMake(self.size.width * 0.2, _playableHeight * 0.4 + _playableStart);
+  _player.zPosition = 50;
+  [_worldNode addChild:_player];
+  
+  CGFloat offsetX = _player.frame.size.width * _player.anchorPoint.x;
+    NSLog(@"offsetx %f",offsetX);
+  CGFloat offsetY = _player.frame.size.height * _player.anchorPoint.y;
+  CGMutablePathRef path = CGPathCreateMutable();
+    CGPathMoveToPoint(path, NULL, 32 - offsetX, 52 - offsetY);
+    CGPathAddLineToPoint(path, NULL, 42 - offsetX, 45 - offsetY);
+    CGPathAddLineToPoint(path, NULL, 43 - offsetX, 37 - offsetY);
+    CGPathAddLineToPoint(path, NULL, 40 - offsetX, 31 - offsetY);
+    CGPathAddLineToPoint(path, NULL, 33 - offsetX, 30 - offsetY);
+    CGPathAddLineToPoint(path, NULL, 33 - offsetX, 25 - offsetY);
+    CGPathAddLineToPoint(path, NULL, 25 - offsetX, 14 - offsetY);
+    CGPathAddLineToPoint(path, NULL, 21 - offsetX, 1 - offsetY);
+    CGPathAddLineToPoint(path, NULL, 2 - offsetX, 11 - offsetY);
+    CGPathAddLineToPoint(path, NULL, 7 - offsetX, 31 - offsetY);
+    CGPathAddLineToPoint(path, NULL, 19 - offsetX, 47 - offsetY);
+  CGPathCloseSubpath(path);
+  _player.physicsBody = [SKPhysicsBody bodyWithPolygonFromPath:path];
+  
+  //[_player skt_attachDebugFrameFromPath:path color:[SKColor redColor]];
+
+  _player.physicsBody.categoryBitMask = EntityCategoryPlayer;
+  _player.physicsBody.collisionBitMask = 0;
+  _player.physicsBody.contactTestBitMask = EntityCategoryObstacle | EntityCategoryGround;
+  
+}
+
+- (void)setupSounds {
+    
+  //_dingAction = [SKAction playSoundFileNamed:@"ding.wav" waitForCompletion:NO];
+  _flapAction = [SKAction playSoundFileNamed:@"falling.wav" waitForCompletion:NO];
+  _whackAction = [SKAction playSoundFileNamed:@"whack.wav" waitForCompletion:NO];
+  _fallingAction = [SKAction playSoundFileNamed:@"falling.wav" waitForCompletion:NO];
+  _hitGroundAction = [SKAction playSoundFileNamed:@"hitGround.wav" waitForCompletion:NO];
+  _popAction = [SKAction playSoundFileNamed:@"pop.wav" waitForCompletion:NO];
+  _coinAction = [SKAction playSoundFileNamed:@"coin.wav" waitForCompletion:NO];
+    
+}
+
+- (void)setupScoreLabel {
+  _scoreLabel = [[SKLabelNode alloc] initWithFontNamed:kFontName];
+  _scoreLabel.fontColor = [UIColor whiteColor];
+  _scoreLabel.position = CGPointMake(self.size.width/2, self.size.height - kMargin);
+  _scoreLabel.text = @"0";
+  _scoreLabel.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+  _scoreLabel.zPosition = LayerUI;
+  [_worldNode addChild:_scoreLabel];
+}
+
+- (void)setupScorecard {
+
+  if (_score > [self bestScore]) {
+    [self setBestScore:_score];
+  }
+
+  SKSpriteNode *scorecard = [SKSpriteNode spriteNodeWithImageNamed:@"Scorecard"];
+  scorecard.position = CGPointMake(self.size.width * 0.5, self.size.height/2);
+  scorecard.name = @"Tutorial";
+  scorecard.zPosition = LayerUI;
+  [_worldNode addChild:scorecard];
+  
+  SKLabelNode *lastScore = [[SKLabelNode alloc] initWithFontNamed:kFontName];
+  lastScore.fontColor = [UIColor whiteColor];
+  lastScore.position = CGPointMake(-scorecard.size.width * 0.25, -scorecard.size.height * 0.2);
+  lastScore.text = [NSString stringWithFormat:@"%d", _score];
+  [scorecard addChild:lastScore];
+  
+  SKLabelNode *bestScore = [[SKLabelNode alloc] initWithFontNamed:kFontName];
+  bestScore.fontColor = [UIColor whiteColor];
+  bestScore.position = CGPointMake(scorecard.size.width * 0.25, -scorecard.size.height * 0.2);
+  bestScore.text = [NSString stringWithFormat:@"%d", [self bestScore]];
+  [scorecard addChild:bestScore];
+  
+  SKSpriteNode *gameOver = [SKSpriteNode spriteNodeWithImageNamed:@"GameOver"];
+  gameOver.position = CGPointMake(self.size.width/2, self.size.height/2 + scorecard.size.height/2 + kMargin + gameOver.size.height/2);
+  gameOver.zPosition = LayerUI;
+  [_worldNode addChild:gameOver];
+  
+  SKSpriteNode *okButton = [SKSpriteNode spriteNodeWithImageNamed:@"Button.png"];
+  okButton.position = CGPointMake(self.size.width * 0.25, self.size.height/2 - scorecard.size.height/2 - kMargin - okButton.size.height/2);
+  okButton.zPosition = LayerUI;
+  [_worldNode addChild:okButton];
+  
+  SKSpriteNode *ok = [SKSpriteNode spriteNodeWithImageNamed:@"OK"];
+  ok.position = CGPointZero;
+  ok.zPosition = LayerUI;
+  [okButton addChild:ok];
+  
+  SKSpriteNode *shareButton = [SKSpriteNode spriteNodeWithImageNamed:@"Button.png"];
+  shareButton.position = CGPointMake(self.size.width * 0.75, self.size.height/2 - scorecard.size.height/2 - kMargin - shareButton.size.height/2);
+  shareButton.zPosition = LayerUI;
+  [_worldNode addChild:shareButton];
+  
+  SKSpriteNode *share = [SKSpriteNode spriteNodeWithImageNamed:@"Share"];
+  share.position = CGPointZero;
+  share.zPosition = LayerUI;
+  [shareButton addChild:share];
+    self.state=YES;
+  gameOver.scale = 0;
+  gameOver.alpha = 0;
+  SKAction *group = [SKAction group:@[
+      [SKAction fadeInWithDuration:kAnimDelay],
+      [SKAction scaleTo:1.0 duration:kAnimDelay]
+    ]];
+  group.timingMode = SKActionTimingEaseInEaseOut;
+  [gameOver runAction:[SKAction sequence:@[
+    [SKAction waitForDuration:kAnimDelay],
+    group
+    ]]];
+  
+  scorecard.position = CGPointMake(self.size.width * 0.5, -scorecard.size.height/2);
+  SKAction *moveTo = [SKAction moveTo:CGPointMake(self.size.width/2, self.size.height/2) duration:kAnimDelay];
+  moveTo.timingMode = SKActionTimingEaseInEaseOut;
+  [scorecard runAction:[SKAction sequence:@[
+    [SKAction waitForDuration:kAnimDelay*2],
+    moveTo
+    ]]];
+  
+  okButton.alpha = 0;
+  shareButton.alpha = 0;
+  SKAction *fadeIn = [SKAction sequence:@[
+    [SKAction waitForDuration:kAnimDelay*3],
+    [SKAction fadeInWithDuration:kAnimDelay]
+  ]];
+  [okButton runAction:fadeIn];
+  [shareButton runAction:fadeIn];
+  
+  SKAction *pops = [SKAction sequence:@[
+  [SKAction waitForDuration:kAnimDelay],
+    _popAction,
+    [SKAction waitForDuration:kAnimDelay],
+    _popAction,
+    [SKAction waitForDuration:kAnimDelay],
+    _popAction,
+    [SKAction runBlock:^{
+      [self switchToGameOver];
+    }]
+  ]];
+  [self runAction:pops];
+
+}
+
+- (void)setupTutorial {
+  SKSpriteNode *tutorial = [SKSpriteNode spriteNodeWithImageNamed:@"Tutorial"];
+  tutorial.position = CGPointMake((int)self.size.width * 0.5, (int)_playableHeight * 0.4 + _playableStart);
+  tutorial.name = @"Tutorial";
+  tutorial.zPosition = LayerUI;
+  [_worldNode addChild:tutorial];
+  
+  SKSpriteNode *ready = [SKSpriteNode spriteNodeWithImageNamed:@"Ready"];
+  ready.position = CGPointMake(self.size.width * 0.5, _playableHeight * 0.7 + _playableStart);
+  ready.name = @"Tutorial";
+  ready.zPosition = LayerUI;
+  [_worldNode addChild:ready];
+    
+//    SKSpriteNode *logo = [SKSpriteNode spriteNodeWithImageNamed:@"logo"];
+//    logo.position = CGPointMake(self.size.width * 0.5, _playableHeight * 0.83 + _playableStart);
+//    logo.name = @"Tutorial";
+//    logo.zPosition = LayerUI;
+//    [_worldNode addChild:logo];
+}
+
+#pragma mark - Gameplay
+
+- (SKSpriteNode *)createObstacle {
+    
+    int imgType = 0;
+    
+    if (arc4random_uniform != NULL){
+        imgType = arc4random_uniform (5);
+//        NSLog(@"if imgType is %d",imgType);
+    }
+    else{
+        imgType = (arc4random() % 5);
+//         NSLog(@"else imgType is %d",imgType);
+    }
+    
+    NSString *loadImageType = [NSString stringWithFormat:@"Debris%d",imgType];
+    SKSpriteNode *sprite = [SKSpriteNode spriteNodeWithImageNamed:loadImageType];
+    sprite.zPosition = LayerObstacle;
+//    NSLog(@"sprite frame size width %f height %f",sprite.frame.size.width,sprite.frame.size.height);
+    CGFloat offsetX = sprite.frame.size.width * sprite.anchorPoint.x;
+    CGFloat offsetY = sprite.frame.size.height * sprite.anchorPoint.y;
+    
+    CGMutablePathRef path = CGPathCreateMutable();
+//    imgType=1;
+    switch (imgType) {
+        case 0:
+            CGPathMoveToPoint(path, NULL, 27 - offsetX, 315 - offsetY);
+//            NSLog(@"move to the point %f and %f",27-offsetX,315-offsetY);
+            CGPathAddLineToPoint(path, NULL, 49 - offsetX, 268 - offsetY);
+//            NSLog(@"add path x %f and y %f",49-offsetX,268-offsetY);
+            CGPathAddLineToPoint(path, NULL, 53 - offsetX, 232 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 53 - offsetX, 47 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 47 - offsetX, 4 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 41 - offsetX, 0 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 18 - offsetX, 2 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 1 - offsetX, 20 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 1 - offsetX, 95 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 2 - offsetX, 197 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 2 - offsetX, 234 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 2 - offsetX, 290 - offsetY);
+            break;
+        case 1:
+            CGPathMoveToPoint(path, NULL, 35 - offsetX, 312 - offsetY);
+//              NSLog(@"move to the point %f and %f",27-offsetX,315-offsetY);
+            CGPathAddLineToPoint(path, NULL, 53 - offsetX, 296 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 52 - offsetX, 3 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 27 - offsetX, 3 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 18 - offsetX, 0 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 6 - offsetX, 3 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 1 - offsetX, 10 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 1 - offsetX, 97 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 1 - offsetX, 307 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 15 - offsetX, 315 - offsetY);
+            break;
+        case 2:
+            CGPathMoveToPoint(path, NULL, 24 - offsetX, 306 - offsetY);
+//              NSLog(@"move to the point %f and %f",27-offsetX,315-offsetY);
+            CGPathAddLineToPoint(path, NULL, 53 - offsetX, 283 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 53 - offsetX, 181 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 53 - offsetX, 15 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 47 - offsetX, 6 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 32 - offsetX, 0 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 9 - offsetX, 6 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 0 - offsetX, 19 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 0 - offsetX, 188 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 1 - offsetX, 262 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 9 - offsetX, 299 - offsetY);
+            break;
+        case 3:
+            CGPathMoveToPoint(path, NULL, 53 - offsetX, 287 - offsetY);
+//              NSLog(@"move to the point %f and %f",27-offsetX,315-offsetY);
+            CGPathAddLineToPoint(path, NULL, 50 - offsetX, 9 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 41 - offsetX, 3 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 26 - offsetX, 0 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 8 - offsetX, 6 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 1 - offsetX, 19 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 0 - offsetX, 102 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 0 - offsetX, 290 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 8 - offsetX, 305 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 15 - offsetX, 311 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 28 - offsetX, 312 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 43 - offsetX, 306 - offsetY);
+            break;
+        case 4:
+            CGPathMoveToPoint(path, NULL, 25 - offsetX, 314 - offsetY);
+//              NSLog(@"move to the point %f and %f",27-offsetX,315-offsetY);
+            CGPathAddLineToPoint(path, NULL, 53 - offsetX, 294 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 52 - offsetX, 20 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 48 - offsetX, 8 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 31 - offsetX, 1 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 9 - offsetX, 8 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 1 - offsetX, 20 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 4 - offsetX, 154 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 1 - offsetX, 216 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 2 - offsetX, 278 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 3 - offsetX, 298 - offsetY);
+            CGPathAddLineToPoint(path, NULL, 10 - offsetX, 310 - offsetY);
+            break;
+        default:
+            break;
+    }
+    
+    CGPathCloseSubpath(path);
+    
+    sprite.physicsBody = [SKPhysicsBody bodyWithPolygonFromPath:path];
+    
+    //[sprite skt_attachDebugFrameFromPath:path color:[SKColor redColor]];
+    
+    sprite.physicsBody.categoryBitMask = EntityCategoryObstacle;
+    sprite.physicsBody.collisionBitMask = 0;
+    sprite.physicsBody.contactTestBitMask = EntityCategoryPlayer;
+    
+    return sprite;
+}
+
+- (void)spawnObstacle {
+
+  SKSpriteNode *bottomObstacle = [self createObstacle];
+  bottomObstacle.name = @"BottomObstacle";
+    bottomObstacle.zPosition=10;
+  float startX = self.size.width + bottomObstacle.size.width/2;
+//    NSLog(@"start X %f",startX);
+  
+  float bottomObstacleMin = (_playableStart - bottomObstacle.size.height/2) + _playableHeight * kBottomObstacleMinFraction;
+    NSLog(@"bottom Obstacle min %f",bottomObstacleMin);
+  float bottomObstacleMax = (_playableStart - bottomObstacle.size.height/2) + _playableHeight * kBottomObstacleMaxFraction;
+    
+        //commented by me 26 june
+    //    bottomObstacle.position = CGPointMake(startX,( RandomFloatRange(bottomObstacleMin, bottomObstacleMax))/*+[GameStatus sharedState].levelNumber*2*/);
+    
+   NSLog(@"bottom obstacle max %f",bottomObstacleMax);
+//    NSLog(@"bottomObstacle.positionx and y %f  and %f",bottomObstacle.position.x,bottomObstacle.position.y);
+    
+    float yPos;
+    yPos=RandomFloatRange(bottomObstacleMin, bottomObstacleMax);
+    
+    bottomObstacle.position = CGPointMake(startX,yPos);
+
+//    bottomObstacle.position = CGPointMake(startX,(RandomFloatRange(20+5*[GameStatus sharedState].levelNumber)));
+    
+  [_worldNode addChild:bottomObstacle];
+  
+  SKSpriteNode *topObstacle = [self createObstacle];
+  topObstacle.name = @"TopObstacle";
+  topObstacle.zRotation = DegreesToRadians(180);
+    topObstacle.zPosition=10;
+    topObstacle.position = CGPointMake(startX,490-[GameStatus sharedState].levelNumber*5);
+//  topObstacle.position = CGPointMake(startX, (bottomObstacle.position.y + bottomObstacle.size.height/2 + topObstacle.size.height/2 + _player.size.height * kGapMultiplier)-[GameStatus sharedState].levelNumber*20 );
+    topObstacle.position=CGPointMake(startX, (yPos+_player.size.height*kGapMultiplier+bottomObstacle.size.height/2+bottomObstacle.size.height/2)+41-[GameStatus sharedState].levelNumber);
+  [_worldNode addChild:topObstacle];
+//    NSLog(@"diff in botton and top %f",bottomObstacle.position.y-topObstacle.position.y);
+//      NSLog(@"Top Obstacle.position.x and y %f  and %f",topObstacle.position.x,topObstacle.position.y);
+  float moveX = self.size.width + bottomObstacle.size.width;
+  float moveDuration = moveX / kGroundSpeed;
+  SKAction *sequence = [SKAction sequence:@[
+    [SKAction moveByX:-moveX y:0 duration:moveDuration-0.01*[GameStatus sharedState].levelNumber],
+    [SKAction removeFromParent]
+  ]];
+  
+  [topObstacle runAction:sequence];
+  [bottomObstacle runAction:sequence];
+}
+
+- (void)startSpawning {
+
+//  SKAction *firstDelay = [SKAction waitForDuration:kFirstSpawnDelay-0.01*[GameStatus sharedState].levelNumber ];
+    SKAction *firstDelay = [SKAction waitForDuration: 1.0-0.01*[GameStatus sharedState].levelNumber  ];
+
+    
+    NSLog(@"speed 1st  %f",1.0-0.01*[GameStatus sharedState].levelNumber );
+  SKAction *spawn = [SKAction performSelector:@selector(spawnObstacle) onTarget:self];
+//  SKAction *everyDelay = [SKAction waitForDuration:kEverySpawnDelay];
+//    SKAction *everyDelay = [SKAction waitForDuration:kEverySpawnDelay-0.01*[GameStatus sharedState].levelNumber];
+//    if ([GameStatus sharedState].levelNumber==40) {
+//        SKAction *everyDelay = [SKAction waitForDuration:];
+//    }
+//    SKAction *everyDelay = [SKAction waitForDuration:5.0-0.2*[GameStatus sharedState].levelNumber];
+    SKAction *everyDelay = [SKAction waitForDuration:1.82-0.02*[GameStatus sharedState].levelNumber];
+       NSLog(@"speed 2nd %f",10.0-0.01*[GameStatus sharedState].levelNumber );
+  SKAction *spawnSequence = [SKAction sequence:@[spawn, everyDelay]];
+  SKAction *foreverSpawn = [SKAction repeatActionForever:spawnSequence];
+  SKAction *overallSequence = [SKAction sequence:@[firstDelay, foreverSpawn]];
+  [self runAction:overallSequence withKey:@"Spawn"];
+
+}
+
+- (void)stopSpawning {
+  //[self removeActionForKey:@"Spawn"];
+    /*
+  [_worldNode enumerateChildNodesWithName:@"TopObstacle" usingBlock:^(SKNode *node, BOOL *stop) {
+    [node removeAllActions];
+  }];
+  [_worldNode enumerateChildNodesWithName:@"BottomObstacle" usingBlock:^(SKNode *node, BOOL *stop) {
+      [node removeAllActions];
+    }];*/
+}
+
+- (void)flapPlayer {
+
+  // Play sound
+      if (self.num==1) {
+  [self runAction:_flapAction];
+      }
+  // Apply impulse
+  _playerVelocity = CGPointMake(0, kImpulse);
+    // Move sombrero
+    SKAction *moveUp = [SKAction moveByX:0 y:12 duration:0.1];
+    moveUp.timingMode = SKActionTimingEaseInEaseOut;
+    SKAction *moveDown = [moveUp reversedAction];
+    [_sombrero runAction:[SKAction sequence:@[moveUp, moveDown]]];
+
+  
+}
+
+//-(void)update:(NSTimeInterval)currentTime {
+//
+//
+//}
+
+-(void)call{
+
+//    if (self.state==YES) {
+//
+    self.state=NO;
+    self.timer = [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(timerTick:) userInfo:nil repeats:YES];
+      [[NSRunLoop currentRunLoop] addTimer:self.timer forMode:NSDefaultRunLoopMode];
+//    }
+}
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
+  
+//  UITouch *touch = [touches anyObject];
+//  CGPoint touchLocation = [touch locationInNode:self];
+    if (self.state==YES) {
+
+   [self call];
+    }
+//
+  switch (_gameState) {
+  case GameStateMainMenu:
+    break;
+  case GameStateTutorial:
+    [self switchToPlay];
+    break;
+  case GameStatePlay:
+    [self flapPlayer];
+    break;
+  case GameStateFalling:
+    break;
+  case GameStateShowingScore:
+    break;
+  case GameStateGameOver:
+//    if (touchLocation.x < self.size.width * 0.6) {
+//      [self switchToNewGame];
+//    } else {
+//      [self shareScore];
+//    }
+    break;
+  }
+//    
+//     _nextAsteroidSpawn = 0;
+//    
+//    for (SKSpriteNode *asteroid in _asteroids) {
+//        asteroid.hidden = YES;
+//    }
+   }
+#pragma mark - Switch state
+
+- (void)switchToFalling {
+  _gameState = GameStateGameOver;
+  
+  // Transition code...
+      if (self.num==1) {
+    [self runAction:[SKAction sequence:@[
+                                         _fallingAction]]];
+      }
+   
+        [_player removeAllActions];
+  [self stopSpawning];
+}
+
+- (void)switchToShowScore :(int)retryOrNext{
+//   [GameStatus sharedState].remLife= [GameStatus sharedState].remLife-1 ;
+//    if ([GameStatus sharedState].remLife==0) {
+//      
+ 
+    NSLog(@"switch to score");
+  
+ 
+  [_player removeAllActions];
+  [self stopSpawning];
+//    _musicPlayer=nil;
+    _button.hidden=YES;
+    [self.timer invalidate];
+    self.timer=nil;
+    [_musicPlayer stop];
+//    [[NSUserDefaults standardUserDefaults]setInteger:3 forKey:@"life"];
+//    [[NSUserDefaults standardUserDefaults] synchronize];
+    SKTransition *reveal = [SKTransition revealWithDirection:SKTransitionDirectionLeft duration:2.0];
+    GameOverScene *newScene =[GameOverScene alloc]    ;
+        //        //  Optionally, insert code to configure the new scene.
+    newScene.str=[NSString stringWithFormat:@"%d",_score];
+    newScene.bestScore=[NSString stringWithFormat:@"%d",[self bestScore]];
+        //   [newScene initWithSize:CGSizeMake(320, 480)retryOrNextLevel:retryOrNext  playSound:self.num];
+    
+    [newScene   initWithSize:CGSizeMake(320, 480)retryOrNextLevel:retryOrNext  playSound:self.num];
+    
+    NSLog(@"new scene value is %@",newScene.str);
+    NSLog(@"==================================================================================");
+    [self.scene.view presentScene: newScene transition: reveal];
+        
+//  20 june commented by me
+//  [self setupScorecard];
+//  [self reportAchievements];
+    
+}
+
+#pragma mark ACHIEVEMENT
+
+-(void)reportAchievements
+{
+    NSMutableArray *achievements = [NSMutableArray array];
+    if (_score > 0){
+        [achievements addObject:[AchievementsHelper medaglieAchievement:_score]];
+        [[GameKitHelper sharedGameKitHelper]reportAchievements:achievements];
+        [self reportScoreToGameCenter];
+    }
+}
+
+- (void)reportScoreToGameCenter {
+    [[GameKitHelper sharedGameKitHelper] reportScore:_score forLeaderboardID:@"it.devco.Space_Debris.TopScore"];
+}
+
+- (void)switchToNewGame {
+
+  [self runAction:_popAction];
+
+  SKScene *newScene = [[MyScene alloc] initWithSize:self.size delegate:_delegate];
+  SKTransition *transition = [SKTransition fadeWithColor:[SKColor blackColor] duration:0.5];
+  [self.view presentScene:newScene transition:transition];
+}
+
+- (void)switchToGameOver {
+  _gameState = GameStateGameOver;
+}
+
+- (void)switchToTutorial {
+
+  _gameState = GameStateTutorial;
+  [self setupBackground];
+  //[self setupForeground];
+  [self setupPlayer];
+  [self setupSounds];
+  [self setupSombrero];
+  [self setupScoreLabel];
+  [self setupTutorial];
+
+}
+
+- (void)switchToPlay {
+
+  // Set state
+  _gameState = GameStatePlay;
+
+  [_worldNode enumerateChildNodesWithName:@"Tutorial" usingBlock:^(SKNode *node, BOOL *stop) {
+//      NSLog(@"childNode ");
+    [node runAction:[SKAction sequence:@[
+      [SKAction fadeOutWithDuration:0.5],
+      [SKAction removeFromParent]
+    ]]];
+  }];
+  
+  // Remove wobble
+  [_player removeActionForKey:@"Wobble"];
+  
+  // Start spawning
+  [self startSpawning];
+  
+  // Move player
+  [self flapPlayer];
+//    SKTransition *reveal = [SKTransition revealWithDirection:SKTransitionDirectionDown duration:1.0];
+//    LevelSelectionScene *newScene = [[LevelSelectionScene alloc] initWithSize:CGSizeMake(320, 480)];
+//        //  Optionally, insert code to configure the new scene.
+//    [self.scene.view presentScene: newScene transition: reveal];
+//    UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+//    LevelSelectionViewController *level=[[LevelSelectionViewController alloc]init];
+//    [rootVC presentViewController:level animated:YES completion:nil];
+  
+}
+
+#pragma mark - Updates
+
+- (void)checkHitGround {
+  if (_hitGround) {
+    _hitGround = NO;
+      
+//      [GameStatus sharedState].remLife=[GameStatus sharedState].remLife -1;
+//      
+//      [[NSUserDefaults standardUserDefaults] setInteger:[GameStatus sharedState].remLife forKey:@"life"];
+//      [[NSUserDefaults standardUserDefaults] synchronize];
+    _playerVelocity = CGPointZero;
+    _player.position = CGPointMake(_player.position.x, _playableStart + _player.size.width/2);
+    _player.zRotation = DegreesToRadians(-90);
+        if (self.num==1) {
+    [self runAction:_hitGroundAction];
+        }
+      [_musicPlayer stop];
+//      if(   [[NSUserDefaults standardUserDefaults] integerForKey:@"life"]==0){
+//      if ([GameStatus sharedState].remLife==0) {
+          [self.timer invalidate];
+          [[NSUserDefaults standardUserDefaults] setInteger:3 forKey:@"life"];
+          [[NSUserDefaults standardUserDefaults] synchronize];
+
+          self.timer=nil;
+//          _hitGround = YES;
+          [self switchToShowScore:1];
+      
+
+
+//      }
+//      }else{
+//          [[NSUserDefaults standardUserDefaults] setInteger:[GameStatus sharedState].remLife forKey:@"life"];
+//          [[NSUserDefaults standardUserDefaults] synchronize];
+//          [self initWithSize:CGSizeMake(320, 480) delegate:self];
+//          
+      
+
+//      }
+
+       }
+}
+
+- (void)checkHitObstacle {
+  if (_hitObstacle) {
+    _hitObstacle = NO;
+    [self switchToFalling];
+      [[NSUserDefaults standardUserDefaults] setInteger:3 forKey:@"life"];
+      [[NSUserDefaults standardUserDefaults] synchronize];
+      [self switchToShowScore:1];
+
+
+  }
+}
+
+- (void)updatePlayer {
+  
+  // Apply gravity
+  CGPoint gravity = CGPointMake(0, kGravity);
+  CGPoint gravityStep = CGPointMultiplyScalar(gravity, _dt);
+  _playerVelocity = CGPointAdd(_playerVelocity, gravityStep);
+
+  // Apply velocity
+  CGPoint velocityStep = CGPointMultiplyScalar(_playerVelocity, _dt);
+  _player.position = CGPointAdd(_player.position, velocityStep);
+  
+  // Temporary halt when hits ground
+  if ((_player.position.y - _player.size.height/2 <= _playableStart) || (_player.position.y > 670.0)) {
+      _playerVelocity = CGPointZero;
+      _player.position = CGPointMake(_player.position.x, _playableStart + _player.size.width/2);
+      _player.zRotation = DegreesToRadians(-180);
+        if (self.num==1) {
+      [self runAction:_hitGroundAction];
+        }
+      _player.hidden = YES;
+      [_musicPlayer stop];
+//      [self switchToShowScore:1];
+//    _player.position = CGPointMake(_player.position.x, _playableStart + _player.size.height/2);
+//    return;
+  }
+}
+
+- (void)updateForeground {
+
+  [_worldNode enumerateChildNodesWithName:@"Foreground" usingBlock:^(SKNode *node, BOOL *stop) {
+    SKSpriteNode *foreground = (SKSpriteNode *)node;
+    CGPoint moveAmt = CGPointMake(-kGroundSpeed * _dt, 0);
+    foreground.position = CGPointAdd(foreground.position, moveAmt);
+    
+    if (foreground.position.x < -foreground.size.width) {
+      foreground.position = CGPointAdd(foreground.position, CGPointMake(foreground.size.width * kNumForegrounds, 0));
+    }
+    
+  }];
+
+}
+
+-(void)updateScore {
+   
+//    self.timer = [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(timerTick:) userInfo:nil repeats:YES];
+//    [[NSRunLoop currentRunLoop] addTimer:self.timer forMode:NSDefaultRunLoopMode];
+    
+     [_worldNode enumerateChildNodesWithName:@"BottomObstacle" usingBlock:^(SKNode *node, BOOL *stop) {
+      SKSpriteNode *obstacle = (SKSpriteNode *)node;
+    
+      NSNumber *passed = obstacle.userData[@"Passed"];
+      if (passed && passed.boolValue) return;
+     
+      if (_player.position.x > obstacle.position.x + obstacle.size.width/2) {
+//          NSLog(@"matching");
+      }
+      if (_player.position.x > obstacle.position.x + obstacle.size.width/2) {
+          val=val + 1;
+//          NSLog(@"_player position x %f and y %f ",_player.position.x,_player.position.y);
+//          NSLog(@"obstacle position x %f",obstacle.position.x + obstacle.size.width/2);
+        _score++;
+                  _scoreLabel.text = [NSString stringWithFormat:@"%d", _score];
+                    if (val>=14) {
+//                        NSLog(@"levelcleared");
+                        val=0;
+          }
+            if (self.num==1) {
+        [self runAction:_coinAction];
+            }
+        obstacle.userData[@"Passed"] = @YES;
+      }
+    
+  }];
+}
+
+-(void)update:(CFTimeInterval)currentTime {
+
+    
+    
+  if (_lastUpdateTime) {
+    _dt = currentTime - _lastUpdateTime;
+  } else {
+    _dt = 0;
+  }
+  _lastUpdateTime = currentTime;
+
+  switch (_gameState) {
+  case GameStateMainMenu:
+    break;
+  case GameStateTutorial:
+    break;
+  case GameStatePlay:
+    [self checkHitGround];
+    [self checkHitObstacle];
+    [self updateForeground];
+    [self updatePlayer];
+    [self updateScore];
+    break;
+  case GameStateFalling:
+    [self checkHitGround];
+   [self updatePlayer];
+    break;
+  case GameStateShowingScore:
+    break;
+  case GameStateGameOver:
+    break;
+  }
+    
+    [_parallaxNodeBackgrounds update:currentTime];
+    
+    
+        //Astroid action Commiting 28 june by me
+    double curTime = CACurrentMediaTime();
+    if (curTime > _nextAsteroidSpawn) {
+            //NSLog(@"spawning new asteroid");
+//        float randSecs = [self randomValueBetween:2.0 -.01*[GameStatus sharedState].levelNumber andValue:10.0];
+        float randSecs=[self randomValueBetween:2.0 -.01*[GameStatus sharedState].levelNumber andValue:10.0];
+        _nextAsteroidSpawn = randSecs + curTime;
+        
+        float randY = [self randomValueBetween:0.0 andValue:self.frame.size.height];
+        float randDuration = [self randomValueBetween:2.0 andValue:10.0];
+        
+        SKSpriteNode *asteroid = [_asteroids objectAtIndex:_nextAsteroid];
+        _nextAsteroid++;
+        
+        if (_nextAsteroid >= _asteroids.count) {
+            _nextAsteroid = 0;
+        }
+        
+        [asteroid removeAllActions];
+        asteroid.position = CGPointMake(self.frame.size.width+asteroid.size.width/2, randY);
+        asteroid.hidden = NO;
+        
+        CGPoint location = CGPointMake(-self.frame.size.width-asteroid.size.width, randY);
+        
+        SKAction *moveAction = [SKAction moveTo:location duration:randDuration];
+        SKAction *doneAction = [SKAction runBlock:(dispatch_block_t)^() {
+                //NSLog(@"Animation Completed");
+            asteroid.hidden = YES;
+        }];
+        
+        SKAction *moveAsteroidActionWithDone = [SKAction sequence:@[moveAction,doneAction ]];
+        
+        [asteroid runAction:moveAsteroidActionWithDone withKey:@"asteroidMoving"];
+        
+        
+        
+        double curTime = CACurrentMediaTime();
+        if (curTime > _nextCoinSpawn) {
+                //NSLog(@"spawning new asteroid");
+//            float randSeconds = [self randomValueBetween:2.0 -.01*[GameStatus sharedState].levelNumber andValue:10.0];
+            _nextAsteroidSpawn = randSecs + curTime;
+            
+            float randY = [self randomValueBetween:0.0 andValue:self.frame.size.height];
+            float randDuration = [self randomValueBetween:0.0 andValue:10.0];
+            
+            SKSpriteNode *coin= [_coins objectAtIndex:_nextCoin];
+            _nextCoin++;
+            
+            if (_nextCoin >= _coins.count) {
+                _nextCoin = 0;
+            }
+            
+            [coin removeAllActions];
+            coin.position = CGPointMake(self.frame.size.width+asteroid.size.width/2, randY);
+            coin.hidden = NO;
+            
+            CGPoint location = CGPointMake(-self.frame.size.width-coin.size.width, randY);
+            
+            SKAction *moveAction = [SKAction moveTo:location duration:randDuration];
+            SKAction *doneAction = [SKAction runBlock:(dispatch_block_t)^() {
+                    //NSLog(@"Animation Completed");
+                coin.hidden = YES;
+            }];
+            
+         SKAction *moveAsteroidActionWithDone = [SKAction sequence:@[moveAction,doneAction ]];
+            
+            [coin runAction:moveAsteroidActionWithDone withKey:@"coinMoving"];
+
+         #pragma coinMinus
+            
+            double curTime = CACurrentMediaTime();
+            if (curTime > _nextCoinMinusSpawn) {
+                    //NSLog(@"spawning new asteroid");
+                    //            float randSeconds = [self randomValueBetween:2.0 -.01*[GameStatus sharedState].levelNumber andValue:10.0];
+                _nextCoinMinusSpawn = randSecs + curTime;
+                
+             float randY = [self randomValueBetween:0.0 andValue:self.frame.size.height];
+               float randDuration = [self randomValueBetween:0.0 andValue:10.0];
+                
+                SKSpriteNode *coinM= [coinMinus objectAtIndex:_nextCoinMinus];
+                _nextCoinMinus++;
+                
+                if (_nextCoinMinus >= coinMinus.count) {
+                    _nextCoinMinus = 0;
+                }
+                
+                [coinM removeAllActions];
+                coinM.position = CGPointMake(self.frame.size.width+asteroid.size.width/2, randY);
+                coinM.hidden = NO;
+                
+                CGPoint location = CGPointMake(-self.frame.size.width-coin.size.width, randY);
+                
+                SKAction *moveAction = [SKAction moveTo:location duration:randDuration];
+                SKAction *doneAction = [SKAction runBlock:(dispatch_block_t)^() {
+                        //NSLog(@"Animation Completed");
+                    coinM.hidden = YES;
+                }];
+                
+                SKAction *moveAsteroidActionWithDone = [SKAction sequence:@[moveAction,doneAction ]];
+                
+                [coinM runAction:moveAsteroidActionWithDone withKey:@"coinMinusMoving"];
+                
+    }
+        }
+    
+}
+}
+#pragma mark - comets random method
+
+- (float)randomValueBetween:(float)low andValue:(float)high {
+    
+    
+    return (((float) arc4random() / 0xFFFFFFFFu) * (high - low)) + low;
+}
+
+#pragma mark - Special
+
+- (void)shareScore {
+
+  NSString *urlString = [NSString stringWithFormat:@"http://itunes.apple.com/app/id%d?mt=8", APP_STORE_ID]; //APP_STORE_ID];
+  NSURL *url = [NSURL URLWithString:urlString];
+  
+  UIImage *screenshot = [self.delegate screenshot];
+
+  NSString *initialTextString = [NSString stringWithFormat:@"I scored %d points in Space Debris! #SpaceDebris!", _score];
+  [self.delegate shareString:initialTextString url:url image:screenshot];
+}
+
+
+
+#pragma mark - Score
+
+- (int)bestScore {
+  return (int)[[NSUserDefaults standardUserDefaults] integerForKey:@"BestScore"];
+}
+
+- (void)setBestScore:(int)bestScore {
+  [[NSUserDefaults standardUserDefaults] setInteger:bestScore forKey:@"BestScore"];
+  [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
+#pragma mark - Collision Detection
+
+- (void)didBeginContact:(SKPhysicsContact *)contact {
+
+    NSLog(@"welcome");
+    SKPhysicsBody *other = (contact.bodyA.categoryBitMask == EntityCategoryPlayer ? contact.bodyB : contact.bodyA);
+    
+     if (self.gameOverDecision==YES) {
+  if (other.categoryBitMask == EntityCategoryGround) {
+        [GameStatus sharedState].remLife=[GameStatus sharedState].remLife-1;
+      [self.timer invalidate];
+      self.timer=nil;
+
+      [[NSUserDefaults standardUserDefaults]setInteger:[GameStatus sharedState].remLife forKey:@"life" ];
+      [[NSUserDefaults standardUserDefaults] synchronize];
+      lifeLabel.text=[NSString stringWithFormat:@"Life %d",[[NSUserDefaults standardUserDefaults] integerForKey:@"life"]];
+      if ([[NSUserDefaults standardUserDefaults]integerForKey:@"life"]==0) {
+    _hitGround = YES;
+          self.gameOverDecision=NO;
+          [self.timer invalidate];
+          self.timer=nil;
+      }
+    else {
+//      
+          [[NSUserDefaults standardUserDefaults] setInteger:[GameStatus sharedState].remLife forKey:@"life"];
+                   [[NSUserDefaults standardUserDefaults] synchronize];
+//                    [self initWithSize:CGSizeMake(320, 480) delegate:self];
+        [self switchToNewGame];
+     }
+    return;
+  }
+   
+       
+  if (other.categoryBitMask == EntityCategoryObstacle) {
+    
+          [GameStatus sharedState].remLife=[GameStatus sharedState].remLife-1;
+      [[NSUserDefaults standardUserDefaults]setInteger:[GameStatus sharedState].remLife forKey:@"life" ];
+      [[NSUserDefaults standardUserDefaults] synchronize];
+        lifeLabel.text=[NSString stringWithFormat:@"Life %d",[[NSUserDefaults standardUserDefaults] integerForKey:@"life"]];
+      if ([[NSUserDefaults standardUserDefaults]integerForKey:@"life"]==0) {
+           _hitObstacle =YES;
+          self.gameOverDecision=NO;
+          [self.timer invalidate];
+          self.timer=nil;
+     
+      }
+      return;
+
+  }
+     }
+//    }
+//    if (other.categoryBitMask==EntityCategoryAstroid) {
+////        _score=_score-10;
+////        if (contact.bodyA.categoryBitMask == EntityCategoryPlayer) {
+////            SKNode *enemy =contact.bodyB.node ;
+////            [enemy removeFromParent];
+////        }
+////        else{
+////            
+////            SKNode *enemy =contact.bodyA.node ;
+////            [enemy removeFromParent];
+////        }
+////        
+////        _scoreLabel.text = [NSString stringWithFormat:@"%d", _score];
+//        
+//        return;
+//    }
+    
+    if (other.categoryBitMask==EntityCategoryCoin) {
+
+        _score=_score+10;
+        if (contact.bodyA.categoryBitMask == EntityCategoryPlayer) {
+            SKNode *enemy =contact.bodyB.node ;
+            [enemy removeFromParent];
+        }
+        else{
+        
+            SKNode *enemy =contact.bodyA.node ;
+            [enemy removeFromParent];
+        }
+       
+        _scoreLabel.text = [NSString stringWithFormat:@"%d", _score];
+        NSLog(@"score ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+      
+
+     return;
+    }
+    if (other.categoryBitMask==EntityCategoryCoinMinus) {
+        
+        _score=_score-10;
+        if (contact.bodyA.categoryBitMask == EntityCategoryPlayer) {
+            SKNode *enemy =contact.bodyB.node ;
+            [enemy removeFromParent];
+        }
+        else{
+            
+            SKNode *enemy =contact.bodyA.node ;
+            [enemy removeFromParent];
+        }
+        
+        _scoreLabel.text = [NSString stringWithFormat:@"%d", _score];
+        NSLog(@"score ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+        
+        
+        return;
+//    }
+
+
+//    SKPhysicsBody *other1 = (contact.bodyA.categoryBitMask == EntityCategoryPlayer ? contact.bodyB : contact.bodyA);
+  }
+}
+@end

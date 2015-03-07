@@ -1,0 +1,339 @@
+//
+//  LevelSelectionScene.m
+//  Space Debris
+//
+//  Created by Globussoft 1 on 6/18/14.
+//  Copyright (c) 2014 Razeware LLC. All rights reserved.
+//
+
+#import "LevelSelectionScene.h"
+//#import "LevelSelectionViewController.h"
+#import "AppDelegate.h"
+#import "MyScene.h"
+#import "GameStatus.h"
+#import <SpriteKit/SpriteKit.h>
+
+typedef NS_ENUM(NSInteger, IIMySceneZPosition)
+{
+    kIIMySceneZPositionScrolling = 0,
+    kIIMySceneZPositionVerticalAndHorizontalScrolling,
+    kIIMySceneZPositionStatic,
+};
+
+
+@interface LevelSelectionScene ()
+    @end
+
+
+@implementation LevelSelectionScene{
+    
+  
+}
+@synthesize _musicPlayer;
+-(id)initWithSize:(CGSize)size {
+    if (self = [super initWithSize:size]) {
+        
+//        SKSpriteNode  *background ;
+        if([UIScreen mainScreen].bounds.size.height>500){
+            background  = [SKSpriteNode spriteNodeWithImageNamed:@"blankbg1.png"];
+        }
+        else{
+            background  = [SKSpriteNode spriteNodeWithImageNamed:@"blankbg.png"];
+            
+        }
+
+        background.anchorPoint = CGPointMake(0.5, 1);
+        background.position = CGPointMake(self.size.width/2, self.size.height);
+//        background.zPosition = LayerBackground;
+        [self addChild:background];
+        
+//     SKSpriteNode   *background1 = [SKSpriteNode spriteNodeWithImageNamed:@"Star5.jpg"];
+//        background1.anchorPoint = CGPointMake(0.5, 1.4);
+//        background1.position = CGPointMake(self.size.width/2, self.size.height+30);
+//            //        background.zPosition = LayerBackground;
+//        [self addChild:background1];
+//
+        
+        [self createCloud];
+        
+        [self addChild:[self loadEmitterNode:@"stars1"]];
+        [self addChild:[self loadEmitterNode:@"stars2"]];
+        [self addChild:[self loadEmitterNode:@"stars3"]];
+
+        
+        cloud = [SKSpriteNode spriteNodeWithImageNamed:@"Astronaut0.png"];
+        cloud.position = CGPointMake(10,400);
+        cloud.name = @"Tutorial";
+        cloud.zPosition=50;
+            //     ready.zPosition = LayerUI;
+        [self addChild:cloud];
+        
+        
+        SKAction *moveUp = [SKAction moveByX:0 y:20 duration:0.20];
+        moveUp.timingMode = SKActionTimingEaseInEaseOut;
+        SKAction *moveDown = [moveUp reversedAction];
+            //        [cloud runAction:[SKAction sequence:@[moveUp,moveDown]]];
+        
+        SKAction *jump =[SKAction sequence:@[moveUp,moveDown]];
+        
+        
+      SKAction *repaeat=[SKAction repeatActionForever:jump ];
+        
+        SKAction *move=[SKAction moveToX:350 duration:10];
+        SKAction *group1 =[SKAction group:@[repaeat,move] ];
+        [cloud runAction:group1];
+//        [NSThread sleepForTimeInterval:15.0];
+
+        SKAction *delay=[SKAction waitForDuration:20 withRange:.5];
+    
+        [cloud runAction:delay];
+                  
+      rootViewController = (UIViewController*)[(AppDelegate*)[[UIApplication sharedApplication] delegate] getRootViewController];
+
+        
+      
+        scrollView=[[UIScrollView alloc] initWithFrame:CGRectMake(25, 120, 270, 250 )];
+        scrollView.contentSize=CGSizeMake(270, 600);
+        [rootViewController.view addSubview:scrollView];
+
+              for (int i=0; i<4; i++) {
+            
+            for (int j=0; j<10; j++) {
+               btnLevels = [UIButton buttonWithType:UIButtonTypeSystem];
+                
+                btnLevels.frame=CGRectMake(15+65*i, 50*j, 48, 48);
+                unsigned buttonNumber = j*4+i+1;
+                btnLevels.tag=buttonNumber;
+                [btnLevels addTarget:self action:@selector(btnAction:) forControlEvents:UIControlEventTouchUpInside];
+//                btnLevels.titleLabel.font=[UIFont
+//                                           fontWithName:@"NKOTB Fever.ttf" size:20];
+                btnLevels.titleLabel.textColor=[UIColor blackColor];
+                [scrollView addSubview:btnLevels];
+            
+                int levelNumbers = [[NSUserDefaults standardUserDefaults] integerForKey:@"levelClear"];
+                [[NSUserDefaults standardUserDefaults]setInteger:3 forKey:@"life"];
+                [[NSUserDefaults standardUserDefaults] synchronize];
+                if (levelNumbers==0) {
+                    
+                    if (buttonNumber==1) {
+                       [btnLevels setBackgroundImage:[UIImage imageNamed:@"clearedlevel.png"] forState:UIControlStateNormal];
+                         [btnLevels setTitle:[NSString stringWithFormat:@"%d",buttonNumber] forState:UIControlStateNormal];
+                    }
+                    else{
+                       [btnLevels setBackgroundImage:[UIImage imageNamed:@"locklevel.png"] forState:UIControlStateNormal];
+                    }
+                }
+                
+                else {
+                    
+                    if (buttonNumber==levelNumbers) {
+                       [btnLevels setBackgroundImage:[UIImage imageNamed:@"currentlevel.png"] forState:UIControlStateNormal];
+                        NSString *str =[NSString stringWithFormat:@"%ld",(long)btnLevels.tag];
+                        [btnLevels setTitle:str forState:UIControlStateNormal];
+                        
+                    }
+                    else if (buttonNumber>levelNumbers) {
+                       [btnLevels setBackgroundImage:[UIImage imageNamed:@"locklevel.png"] forState:UIControlStateNormal];
+                    }
+                    else {
+                        [btnLevels setBackgroundImage:[UIImage imageNamed:@"clearedlevel.png"] forState:UIControlStateNormal];
+                        NSString *str =[NSString stringWithFormat:@"%ld",(long)btnLevels.tag];
+                        [btnLevels setTitle:str forState:UIControlStateNormal];
+                        
+                    }
+                }
+
+            
+            
+            }}
+        [self playMusic];
+            }
+    return self;
+
+
+}
+-(void)createPlayer{
+
+
+}
+
+
+- (SKEmitterNode *)loadEmitterNode:(NSString *)emitterFileName
+{
+    NSString *emitterPath = [[NSBundle mainBundle] pathForResource:emitterFileName ofType:@"sks"];
+    SKEmitterNode *emitterNode = [NSKeyedUnarchiver unarchiveObjectWithFile:emitterPath];
+    
+        //do some view specific tweaks
+    emitterNode.particlePosition = CGPointMake(self.size.width/2.0, self.size.height/2.0);
+    emitterNode.particlePositionRange = CGVectorMake(self.size.width+100, self.size.height);
+    
+    return emitterNode;
+    
+}
+- (void)playMusic
+{
+	NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle]
+                                         pathForResource:@"bgm"
+                                         ofType:@"mp3"]];
+    
+    NSError *error;
+    _musicPlayer = [[AVAudioPlayer alloc]
+                    initWithContentsOfURL:url
+                    error:&error];
+    _musicPlayer.numberOfLoops=-1;
+    if (error)
+    {
+        NSLog(@"Error in audioPlayer: %@",
+              [error localizedDescription]);
+    } else {
+        _musicPlayer.delegate = self;
+        [_musicPlayer prepareToPlay];
+       [_musicPlayer play];
+    }
+}
+
+
+-(void)createCloud{
+    
+    ready1 = [SKSpriteNode spriteNodeWithImageNamed:@"cloud1.png"];
+    ready1.position = CGPointMake(280,420);
+    ready1.name = @"Tutorial";
+            ready1.zPosition = 10;
+    [self addChild:ready1];
+    
+    ready2 = [SKSpriteNode spriteNodeWithImageNamed:@"cloud2.png"];
+    ready2.position = CGPointMake(300,300);
+    ready2.name = @"Tutorial";
+             ready2.zPosition = 10;
+    [self addChild:ready2];
+    
+    ready3 = [SKSpriteNode spriteNodeWithImageNamed:@"cloud1.png"];
+    ready3.position = CGPointMake(420,420);
+    ready3.name = @"Tutorial";
+         ready3.zPosition = 10;
+    [self addChild:ready3];
+    
+//    ready3 = [SKSpriteNode spriteNodeWithImageNamed:@"cloud1.png"];
+//    ready3.position = CGPointMake(250,420);
+//    ready3.name = @"Tutorial";
+//        //     ready.zPosition = LayerUI;
+//    [self addChild:ready3];
+    
+    ready4 = [SKSpriteNode spriteNodeWithImageNamed:@"cloud2.png"];
+    ready4.position = CGPointMake(390,250);
+    ready4.name = @"Tutorial";
+             ready4.zPosition = 10;
+    [self addChild:ready4];
+    
+//    ready2 = [SKSpriteNode spriteNodeWithImageNamed:@"cloud2.png"];
+//    ready2.position = CGPointMake(390,300);
+//    ready2.name = @"Tutorial";
+//        //     ready.zPosition = LayerUI;
+//    [self addChild:ready2];
+
+//    cloud = [SKSpriteNode spriteNodeWithImageNamed:@"Astronaut0.png"];
+//    cloud.position = CGPointMake(10,400);
+//    cloud.name = @"Tutorial";
+//        //     ready.zPosition = LayerUI;
+//    [self addChild:cloud];
+
+    SKAction *movOnCloud=[SKAction moveToX:-100 duration:15];
+   [ready2 runAction:movOnCloud];
+    [ready3 runAction:movOnCloud];
+    [ready4 runAction:movOnCloud];
+    SKAction *rev=[movOnCloud reversedAction];
+    SKAction *revers=[SKAction sequence:@[movOnCloud,rev]];
+        //        SKAction *rep=[SKAction repeatActionForever:revers];
+    [ready1 runAction:revers];
+
+
+    [self startSpawning];
+}
+- (void)startSpawning {
+    
+    SKAction *firstDelay = [SKAction waitForDuration:10];
+    SKAction *spawn = [SKAction performSelector:@selector(createCloud) onTarget:self];
+    SKAction *everyDelay = [SKAction waitForDuration:2];
+    SKAction *spawnSequence = [SKAction sequence:@[spawn, everyDelay]];
+    SKAction *foreverSpawn = [SKAction repeatActionForever:spawnSequence];
+    SKAction *overallSequence = [SKAction sequence:@[firstDelay, foreverSpawn]];
+    [self runAction:overallSequence withKey:@"Spawn"];
+    
+}
+
+        
+-(void)btnAction:(UIButton *)button{
+    
+    
+    if ([button isKindOfClass:[UIButton class]]) {
+        
+        NSLog(@"Sender Button Tag =-=-=- %ld",(long)[button tag]);
+        [GameStatus sharedState].levelNumber=[button tag];
+        
+        if ([button tag] ==1) {
+            [[NSUserDefaults standardUserDefaults] setInteger:[button tag] forKey:@"level"];
+            scrollView.hidden=YES;
+            [_musicPlayer stop];
+            SKTransition *reveal = [SKTransition revealWithDirection:SKTransitionDirectionLeft duration:1.0];
+            MyScene *newScene = [[MyScene alloc] initWithSize:CGSizeMake(320, 480) delegate:self];
+      
+            [self.scene.view presentScene: newScene transition: reveal];
+        }
+        
+        else {
+            int levelNumbers = [[NSUserDefaults standardUserDefaults] integerForKey:@"levelClear"];
+            NSLog(@"level Number %d",levelNumbers);
+            
+            
+            if ([button tag] <= levelNumbers) {
+                [[NSUserDefaults standardUserDefaults] setInteger:[button tag] forKey:@"level"];
+               scrollView.hidden=YES;
+                [_musicPlayer stop];
+                SKTransition *reveal = [SKTransition revealWithDirection:SKTransitionDirectionLeft duration:1.0];
+                MyScene *newScene1 = [[MyScene alloc] initWithSize:CGSizeMake(320, 480) delegate:self];
+                    
+                [self.scene.view presentScene: newScene1 transition: reveal];
+               
+            }
+            else{
+                
+            }
+        }
+      }
+}
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event{
+    UITouch *touch = [touches anyObject];
+    CGPoint location = [touch locationInNode:self];
+    SKNode *node = [self nodeAtPoint:location];
+    if ([node.name isEqualToString:@"addingButton"]) {
+            //do whatever...
+        
+        NSLog(@"gsggdg");
+    }
+    
+
+
+}
+
+
+-(void)didChangeSize:(CGSize)oldSize
+{
+//    CGSize size = [self size];
+    
+//    CGPoint lowerLeft = (CGPoint){0, -size.height};
+//
+//    [self.spriteForStaticGeometry setSize:size];
+//    [self.spriteForStaticGeometry setPosition:lowerLeft];
+//    
+//    [self.spriteToHostHorizontalAndVerticalScrolling setSize:size];
+//    [self.spriteToHostHorizontalAndVerticalScrolling setPosition:lowerLeft];
+}
+
+
+
+-(void)setupBackGround{
+
+
+}
+
+@end

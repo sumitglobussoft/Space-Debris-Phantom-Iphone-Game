@@ -1,0 +1,141 @@
+//
+//  GameStartScreen.m
+//  Space Debris
+//
+//  Created by Globussoft 1 on 6/20/14.
+//  Copyright (c) 2014 Razeware LLC. All rights reserved.
+//
+
+#import "GameStartScreen.h"
+#import "LevelSelectionScene.h"
+#import "FMMParallaxNode.h"
+static NSString *const kFontName = @"PressStart2P";
+@implementation GameStartScreen{
+ FMMParallaxNode *_parallaxNodeBackgrounds;
+}
+@synthesize _musicPlayer;
+
+
+-(id)initWithSize:(CGSize)size {
+ if (self = [super initWithSize:size]) {
+     SKSpriteNode  *background ;
+      if([UIScreen mainScreen].bounds.size.height>500){
+          background  = [SKSpriteNode spriteNodeWithImageNamed:@"blankbg1.png"];
+      }
+      else{
+          background  = [SKSpriteNode spriteNodeWithImageNamed:@"blankbg.png"];
+          
+      }
+    background.anchorPoint = CGPointMake(0.5, 1);
+    background.position = CGPointMake(self.size.width/2, self.size.height);
+        //        background.zPosition = LayerBackground;
+    [self addChild:background];
+     
+     NSArray *parallaxBackgroundNames = @[@"bg_galaxy.png", @"bg_planetsunrise.png",
+                                          @"bg_spacialanomaly.png", @"bg_spacialanomaly2.png"];
+     CGSize planetSizes = CGSizeMake(200.0, 200.0);
+     _parallaxNodeBackgrounds = [[FMMParallaxNode alloc] initWithBackgrounds:parallaxBackgroundNames
+                                                                        size:planetSizes
+                                                        pointsPerSecondSpeed:10.0];
+     _parallaxNodeBackgrounds.position = CGPointMake(size.width/2.0, size.height/2.0);
+     [_parallaxNodeBackgrounds randomizeNodesPositions];
+     [self addChild:_parallaxNodeBackgrounds];
+// [self runAction:[SKAction repeatAction:[SKAction playSoundFileNamed:@"bgm.mp3" waitForCompletion:YES] count:100] withKey:@"sound"];
+//     
+//   [self runAction:[SKAction repeatAction:[SKAction playSoundFileNamed:@"bgm.mp3" waitForCompletion:YES] count:100]  withKey:@"sound"];
+
+     
+     tutorial = [SKSpriteNode spriteNodeWithImageNamed:@"Tutorial.png"];
+     tutorial.position = CGPointMake(170,200);
+     tutorial.name = @"Tutorial";
+//     tutorial.zPosition = LayerUI;
+     [self addChild:tutorial];
+     
+     ready = [SKSpriteNode spriteNodeWithImageNamed:@"Ready.png"];
+     ready.position = CGPointMake(170,340);
+     ready.name = @"Tutorial";
+//     ready.zPosition = LayerUI;
+     [self addChild:ready];
+     
+     logo = [SKSpriteNode spriteNodeWithImageNamed:@"logo.png"];
+     logo.position = CGPointMake(170,400);
+     logo.name = @"Tutorial";
+//     logo.zPosition = LayerUI;
+     [self addChild:logo];
+     
+     [self addChild:[self loadEmitterNode:@"stars1"]];
+     [self addChild:[self loadEmitterNode:@"stars2"]];
+     [self addChild:[self loadEmitterNode:@"stars3"]];
+     
+
+     SKLabelNode *Scoretext = [[SKLabelNode alloc] initWithFontNamed:kFontName];
+     Scoretext.fontColor = [UIColor whiteColor];
+     Scoretext.position = CGPointMake(170, 130);
+     Scoretext.text = @" To Play ";
+     Scoretext.name=@"score";
+     Scoretext.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+         //     scoreLabel.zPosition = LayerUI;
+  [self addChild:Scoretext];
+     
+    
+   [self playMusic];
+ }
+    return  self;
+}
+-(void)update:(CFTimeInterval)currentTime {
+
+    [_parallaxNodeBackgrounds update:currentTime];
+
+}
+- (SKEmitterNode *)loadEmitterNode:(NSString *)emitterFileName
+{
+    NSString *emitterPath = [[NSBundle mainBundle] pathForResource:emitterFileName ofType:@"sks"];
+    SKEmitterNode *emitterNode = [NSKeyedUnarchiver unarchiveObjectWithFile:emitterPath];
+    
+        //do some view specific tweaks
+    emitterNode.particlePosition = CGPointMake(self.size.width/2.0, self.size.height/2.0);
+    emitterNode.particlePositionRange = CGVectorMake(self.size.width+100, self.size.height);
+    
+    return emitterNode;
+    
+}
+
+- (void)playMusic
+{
+	NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle]
+                                         pathForResource:@"bgm"
+                                         ofType:@"mp3"]];
+    
+    NSError *error;
+    _musicPlayer = [[AVAudioPlayer alloc]
+                    initWithContentsOfURL:url
+                    error:&error];
+    _musicPlayer.numberOfLoops=-1;
+    if (error)
+    {
+        NSLog(@"Error in audioPlayer: %@",
+              [error localizedDescription]);
+    } else {
+        _musicPlayer.delegate = self;
+        [_musicPlayer prepareToPlay];
+     [_musicPlayer play];
+    }
+}
+
+
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event{
+    [tutorial removeFromParent];
+    [ready removeFromParent];
+    [logo removeFromParent];
+    [_musicPlayer stop];
+    _musicPlayer=nil;
+[self removeActionForKey:@"sound"];
+    SKTransition *reveal = [SKTransition revealWithDirection:SKTransitionDirectionDown duration:1.0];
+    LevelSelectionScene *newScene = [[LevelSelectionScene alloc] initWithSize:CGSizeMake(320, 480) ];
+        //        //  Optionally, insert code to configure the new scene.
+    [self.scene.view presentScene: newScene transition: reveal];
+//    [self removeAllActions];
+//    [self removeActionForKey:@"sound"];
+
+}
+@end

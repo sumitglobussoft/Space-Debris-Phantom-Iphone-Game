@@ -1,0 +1,402 @@
+//
+//  GameOverScene.m
+//  Space Debris
+//
+//  Created by Globussoft 1 on 6/19/14.
+//  Copyright (c) 2014 Razeware LLC. All rights reserved.
+//
+
+#import "GameOverScene.h"
+#import "AppDelegate.h"
+#import <FacebookSDK/FacebookSDK.h>
+#import "MyScene.h"
+#import "GameStatus.h"
+#import "LevelSelectionScene.h"
+#define ShareToFacebook @"FacebookShare"
+static NSString *const kFontName = @"PressStart2P";
+
+static NSString *const kFontName1 = @"NKOTB Fever";
+static NSString *const kFontName2 = @"sewer.ttf";
+@implementation GameOverScene
+@synthesize str,_musicPlayer;
+
+
+-(id)initWithSize:(CGSize)size retryOrNextLevel:(int) option  playSound:(int)sound{
+ if (self = [super initWithSize:size]) {
+     SKSpriteNode  *background ;
+     self.soundORnot=sound;
+     if([UIScreen mainScreen].bounds.size.height>500){
+          background = [SKSpriteNode spriteNodeWithImageNamed:@"GameOver4inch.png"];
+         
+     }else{
+         background = [SKSpriteNode spriteNodeWithImageNamed:@"gameover.png"];
+     }
+     background.anchorPoint = CGPointMake(0.5, 1);
+     background.position = CGPointMake(self.size.width/2, self.size.height);
+//     background.zPosition=20;
+         //        background.zPosition = LayerBackground;
+     [self addChild:background];
+     
+     self.value=option;
+//     [self spawnObstacle];
+     
+//      SKLabelNode *scoreLabel = [[SKLabelNode alloc] initWithFontNamed:kFontName];
+//     scoreLabel.fontColor = [UIColor redColor];
+//     scoreLabel.position = CGPointMake(160, 430);
+//     scoreLabel.text = @"Game Over";
+//     scoreLabel.zPosition=20;
+//     scoreLabel.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+////     scoreLabel.zPosition = LayerUI;
+//     [self addChild:scoreLabel];
+     NSLog(@"str %@",self.str);
+     
+     SKLabelNode *nextLabel = [[SKLabelNode alloc] init];
+     nextLabel.fontColor = [UIColor whiteColor];
+     nextLabel.position = CGPointMake(160, 230);
+    
+     nextLabel.zPosition=20;
+     nextLabel.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+         //     scoreLabel.zPosition = LayerUI;
+     [self addChild:nextLabel];
+     
+     
+     SKSpriteNode *share = [[SKSpriteNode alloc] initWithImageNamed:@"shareonfb.png"];
+//     share.fontColor = [UIColor greenColor];
+     share.position = CGPointMake(160, 160);
+//     share.text = @"Share";
+     share.name=@"share";
+     share.zPosition=20;
+//     share.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+         //     scoreLabel.zPosition = LayerUI;
+     
+     
+
+     
+     if (self.value==2) {
+         
+         
+         SKSpriteNode *next = [[SKSpriteNode alloc] initWithImageNamed:@"next.png"];
+
+         next.position = CGPointMake(160, 90);
+         next.name=@"next";
+         next.zPosition=20;
+         [self addChild:next];
+         
+          nextLabel.text = [NSString stringWithFormat:@"Crossed Level %d ",[GameStatus sharedState].levelNumber] ;
+         
+         [self addChild:share];
+
+
+     }
+     else{
+
+         SKSpriteNode  *retry=[[SKSpriteNode alloc]initWithImageNamed:@"retry.png"];
+
+     retry.position = CGPointMake(160, 90);
+     retry.name=@"retry";
+     retry.zPosition=20;
+     [self addChild:retry];
+          nextLabel.text = [NSString stringWithFormat:@"          You Lost          "] ;
+     }
+     
+     
+     
+     
+//     SKLabelNode *Score = [[SKLabelNode alloc] initWithFontNamed:kFontName1];
+//     Score.fontColor = [UIColor grayColor];
+//     Score.position = CGPointMake(80, 250);
+//     Score.text = @"Score";
+//     Score.name=@"score";
+//     Score.zPosition=20;
+//     Score.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+//         //     scoreLabel.zPosition = LayerUI;
+//     [self addChild:Score];
+     
+     SKLabelNode *Scoretext = [[SKLabelNode alloc] initWithFontNamed:kFontName1];
+     Scoretext.fontColor = [UIColor whiteColor];
+     Scoretext.position = CGPointMake(220, 340);
+   Scoretext.text = self.str;
+     Scoretext.name=@"score";
+     Scoretext.zPosition=20;
+     Scoretext.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+         //     scoreLabel.zPosition = LayerUI;
+     [self addChild:Scoretext];
+
+//     SKLabelNode *bestScore = [[SKLabelNode alloc] initWithFontNamed:kFontName1];
+//     bestScore.fontColor = [UIColor grayColor];
+//     bestScore.position = CGPointMake(115, 300);
+//     bestScore.text = @"Best Score";
+//     bestScore.name=@"score";
+//     bestScore.zPosition=20;
+//     bestScore.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+//         //     scoreLabel.zPosition = LayerUI;
+//     [self addChild:bestScore];
+     
+     SKLabelNode *bestScoretext = [[SKLabelNode alloc] initWithFontNamed:kFontName1];
+     bestScoretext.fontColor = [UIColor whiteColor];
+     bestScoretext.position = CGPointMake(220, 280);
+     bestScoretext.text = self.bestScore;
+     bestScoretext.name=@"score";
+     bestScoretext.zPosition=15;
+     bestScoretext.verticalAlignmentMode = SKLabelVerticalAlignmentModeTop;
+         //     scoreLabel.zPosition = LayerUI;
+     [self addChild:bestScoretext];
+
+     [self spawnObstacle];
+     
+     [self addChild:[self loadEmitterNode:@"stars1"]];
+     [self addChild:[self loadEmitterNode:@"stars2"]];
+     [self addChild:[self loadEmitterNode:@"stars3"]];
+     if (self.soundORnot==1) {
+         NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle]
+                                              pathForResource:@"bgm"
+                                              ofType:@"mp3"]];
+         
+         NSError *error;
+         _musicPlayer = [[AVAudioPlayer alloc]
+                         initWithContentsOfURL:url
+                         error:&error];
+         _musicPlayer.numberOfLoops=-1;
+         [_musicPlayer prepareToPlay];
+       [_musicPlayer play];
+     }
+     
+ }
+    return  self;
+}
+- (SKEmitterNode *)loadEmitterNode:(NSString *)emitterFileName
+{
+    NSString *emitterPath = [[NSBundle mainBundle] pathForResource:emitterFileName ofType:@"sks"];
+    SKEmitterNode *emitterNode = [NSKeyedUnarchiver unarchiveObjectWithFile:emitterPath];
+    
+        //do some view specific tweaks
+    emitterNode.particlePosition = CGPointMake(self.size.width/2.0, self.size.height/2.0);
+    emitterNode.particlePositionRange = CGVectorMake(self.size.width+100, self.size.height);
+    
+    return emitterNode;
+    
+}
+
+- (SKSpriteNode *)createObstacle {
+    
+    int imgType = 0;
+    
+    if (arc4random_uniform != NULL){
+        imgType = arc4random_uniform (5);
+        NSLog(@"if imgType is %d",imgType);}
+    else{
+        imgType = (arc4random() % 5);
+        NSLog(@"else imgType is %d",imgType);
+    }
+    
+    NSString *loadImageType = [NSString stringWithFormat:@"Debris%d",imgType];
+    SKSpriteNode *sprite = [SKSpriteNode spriteNodeWithImageNamed:loadImageType];
+//    sprite.zPosition = LayerObstacle;
+    NSLog(@"sprite frame size width %f height %f",sprite.frame.size.width,sprite.frame.size.height);
+//    CGFloat offsetX = sprite.frame.size.width * sprite.anchorPoint.x;
+//    CGFloat offsetY = sprite.frame.size.height * sprite.anchorPoint.y;
+    return sprite;
+}
+
+
+- (void)spawnObstacle {
+    
+    SKSpriteNode *bottomObstacle = [self createObstacle];
+    bottomObstacle.name = @"BottomObstacle";
+    bottomObstacle.zPosition=10;
+    
+    float startX = self.size.width + bottomObstacle.size.width/2;
+    NSLog(@"start X %f",startX);
+    
+//    float bottomObstacleMin = (_playableStart - bottomObstacle.size.height/2) + _playableHeight * kBottomObstacleMinFraction;
+//    NSLog(@"bottom Obstacle min %f",bottomObstacleMin);
+//    float bottomObstacleMax = (_playableStart - bottomObstacle.size.height/2) + _playableHeight * kBottomObstacleMaxFraction;
+    bottomObstacle.position = CGPointMake(10,80);
+//    NSLog(@"bottom obstacle max %f",bottomObstacleMax);
+    NSLog(@"bottomObstacle.positionx and y %f  and %f",bottomObstacle.position.x,bottomObstacle.position.y);
+    
+    [self addChild:bottomObstacle];
+    
+    SKSpriteNode *topObstacle = [self createObstacle];
+    topObstacle.name = @"TopObstacle";
+    topObstacle.zRotation = DegreesToRadians(180);
+    topObstacle.position = CGPointMake(10,400);
+    topObstacle.zPosition=10;
+    [self addChild:topObstacle];
+    
+    NSLog(@"Top Obstacle.position.x and y %f  and %f",topObstacle.position.x,topObstacle.position.y);
+//    float moveX = 250;
+//    float moveDuration = moveX / 0.3;
+    SKAction *sequence = [SKAction sequence:@[
+                                              [SKAction moveByX:300 y:0 duration:5],
+//                                             [SKAction removeFromParent]
+                                              ]];
+    
+//    [topObstacle runAction:sequence];
+//    [bottomObstacle runAction:sequence];
+    
+    SKAction *endlessAction = [SKAction repeatActionForever:sequence];
+    [topObstacle runAction:endlessAction];
+     [bottomObstacle  runAction:endlessAction];
+    
+    [self startSpawning];
+    
+}
+- (void)startSpawning {
+    
+    SKAction *firstDelay = [SKAction waitForDuration:5];
+    SKAction *spawn = [SKAction performSelector:@selector(spawnObstacle) onTarget:self];
+    SKAction *everyDelay = [SKAction waitForDuration:5];
+    SKAction *spawnSequence = [SKAction sequence:@[spawn, everyDelay]];
+    SKAction *foreverSpawn = [SKAction repeatActionForever:spawnSequence];
+    SKAction *overallSequence = [SKAction sequence:@[firstDelay, foreverSpawn]];
+    [self runAction:overallSequence withKey:@"Spawn"];
+    
+}
+
+//- (void)shareScore {
+//    
+//    NSString *urlString = [NSString stringWithFormat:@"http://itunes.apple.com/app/id%d?mt=8", APP_STORE_ID]; //APP_STORE_ID];
+//    NSURL *url = [NSURL URLWithString:urlString];
+//    
+//    UIImage *screenshot = [self.delegate screenshot];
+//    
+//    NSString *initialTextString = [NSString stringWithFormat:@"I scored %d points in Space Debris! #SpaceDebris!", _score];
+//    [self.delegate shareString:initialTextString url:url image:screenshot];
+//}
+
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event{
+    
+    [_musicPlayer stop];
+    UITouch *touch = [touches anyObject];
+    CGPoint location = [touch locationInNode:self];
+    SKNode *node = [self nodeAtPoint:location];
+    
+        //if fire button touched, bring the rain
+   if ([node.name isEqualToString:@"retry"]||[node.name isEqualToString:@"next"]) {
+       
+//       NSLog(@"node name");
+       if ( [node.name isEqualToString:@"retry"]) {
+           
+//           if (  [[NSUserDefaults standardUserDefaults] integerForKey:@"life"]<=0){
+               [[NSUserDefaults standardUserDefaults] setInteger:3 forKey:@"life"];
+               [[NSUserDefaults standardUserDefaults]synchronize];
+               LevelSelectionScene *level=[[LevelSelectionScene alloc] initWithSize:CGSizeMake(320, 480)];
+               
+               SKTransition *reveal = [SKTransition revealWithDirection:SKTransitionDirectionDown duration:1.0];
+               
+               [self.scene.view presentScene:level transition:reveal];
+           
+//           }
+//           else{  }
+       
+       
+   }
+       else{
+       
+//           if (  [[NSUserDefaults standardUserDefaults] integerForKey:@"life"]!=0){
+//               [[NSUserDefaults standardUserDefaults] setInteger:3 forKey:@"life"];
+//               [[NSUserDefaults standardUserDefaults]synchronize];
+//               LevelSelectionScene *level=[[LevelSelectionScene alloc] initWithSize:CGSizeMake(320, 480)];
+//               
+//               SKTransition *reveal = [SKTransition revealWithDirection:SKTransitionDirectionDown duration:1.0];
+//
+//               [self.scene.view presentScene:level transition:reveal];
+//           }
+//           else{
+           if ([[NSUserDefaults standardUserDefaults] integerForKey:@"life"]!=0) {
+              
+          [GameStatus sharedState].levelNumber=[GameStatus sharedState].levelNumber+1;
+//           [GameStatus sharedState].levelNumber=0;
+
+           [userDefault setInteger:[GameStatus sharedState].levelNumber forKey:@"level"];
+           
+//           [[NSUserDefaults standardUserDefaults] setInteger:0 forKey:@"levelClear"];
+//           [[NSUserDefaults standardUserDefaults] synchronize];
+
+           int level=[userDefault integerForKey:@"levelClear"];
+           NSLog(@"Level clear %d",level);
+           if ([GameStatus sharedState].levelNumber>level) {
+               [[NSUserDefaults standardUserDefaults] setInteger:[GameStatus sharedState].levelNumber forKey:@"levelClear"];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+               
+           }
+
+       
+          SKTransition *reveal = [SKTransition revealWithDirection:SKTransitionDirectionDown duration:1.0];
+       MyScene *newScene = [[MyScene alloc] initWithSize:CGSizeMake(320, 480) delegate:self];
+       [self.scene.view presentScene: newScene transition: reveal];
+       }
+       
+}
+   }
+
+    if ([node.name isEqualToString:@"share"]) {
+        NSLog(@"hiii");
+        
+        
+        NSLog(@"connect with facebook button clicked.");
+        
+//        self.connectWithFB.visible = NO;
+        AppDelegate * appDelegate = (AppDelegate *)[UIApplication sharedApplication].delegate;
+        
+        if (FBSession.activeSession.isOpen) {
+            
+            [self shareOnFacebook];
+        }
+        else{
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(shareOnFacebook) name:ShareToFacebook object:nil];
+
+            [appDelegate openSessionWithAllowLoginUI:1];
+
+        
+        }
+
+        
+        
+    }
+
+
+}
+-(void) shareOnFacebook{
+        //---------------------------------------
+    
+    self.strPostMessage = [NSString stringWithFormat:@"I cleared Level %i  and scored %@ points.",1,self.str];    NSLog(@"Messaga == %@",self.strPostMessage);
+  NSString *strLife = [NSString stringWithFormat:@"Level %d",1];
+    
+    NSMutableDictionary *params =
+    [NSMutableDictionary dictionaryWithObjectsAndKeys:
+     self.strPostMessage, @"description", strLife, @"caption",
+     @"http://www.globussoft.com/", @"link",@"Space Debris",@"name",
+     //     @"http://i.imgur.com/LaDdDX0.png?1",@"picture",
+     nil];
+    
+    [FBWebDialogs presentFeedDialogModallyWithSession:nil parameters:params handler:^(FBWebDialogResult result, NSURL *resultUrl, NSError *error){
+        
+        if (error) {
+            NSLog(@"Error to post on facebook = %@", [error localizedDescription]);
+        }
+        else{
+            
+            [[NSNotificationCenter defaultCenter] removeObserver:self name:ShareToFacebook object:nil];
+            
+            NSLog(@"result==%u",result);
+            NSLog(@"Url==%@",resultUrl);
+            if (result == FBWebDialogResultDialogNotCompleted) {
+                NSLog(@"Error to post on facebook = %@", [error localizedDescription]);
+                NSLog(@"User cancel Request");
+            }//End Result Check
+            else{
+                NSString *sss= [NSString stringWithFormat:@"%@",resultUrl];
+                if ([sss rangeOfString:@"post_id"].location == NSNotFound) {
+                    NSLog(@"User Cancel Share");
+                }
+                else{
+                    NSLog(@"posted on wall");
+                }
+            }//End Else Block Result Check
+        }
+    }];
+}
+
+@end

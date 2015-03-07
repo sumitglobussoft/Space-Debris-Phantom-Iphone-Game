@@ -1,0 +1,21 @@
+//
+//  GameStartScreen.h
+//  Space Debris
+//
+//  Created by Globussoft 1 on 6/20/14.
+//  Copyright (c) 2014 Razeware LLC. All rights reserved.
+//
+
+#import <SpriteKit/SpriteKit.h>
+#import <AVFoundation/AVFoundation.h>
+
+@interface GameStartScreen : SKScene<AVAudioPlayerDelegate>{
+
+    SKSpriteNode *tutorial;
+    SKSpriteNode *ready;
+    SKSpriteNode *logo;
+  
+}
+-(id)initWithSize:(CGSize)size ;
+@property(nonatomic,strong)  AVAudioPlayer * _musicPlayer;
+@end
